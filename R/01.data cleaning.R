@@ -206,7 +206,7 @@ lymphoma_data_petct <- lymphoma_data_petct %>%
   distinct(mrn, .keep_all = TRUE)
 
 table(lymphoma_data_petct$bmi_cat)
-write_rds(lymphoma_data_petct, "lymphoma_data_petct.rds")
+write_rds(lymphoma_data_petct, "lymphoma_data_petct_10312023.rds")
 
 # Contrast
 lymphoma_data_contrast <- lymphoma_data %>% 
@@ -228,7 +228,7 @@ lymphoma_data_contrast <- lymphoma_data_contrast %>%
   arrange(mrn, time_contrast_tx_days) %>% 
   distinct(mrn, .keep_all = TRUE)
 
-write_rds(lymphoma_data_contrast, "lymphoma_data_contrast.rds")
+write_rds(lymphoma_data_contrast, "lymphoma_data_contrast_10312023.rds")
 table(lymphoma_data_contrast$bmi_cat)
 
 

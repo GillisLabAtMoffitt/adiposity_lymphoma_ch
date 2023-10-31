@@ -1,0 +1,278 @@
+---
+title: "Investigate selected samples for further analysis"
+author: "Christelle Colin-Leitzinger"
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    theme: united
+    highlight: pygments
+    df_print: kable
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+.figure {
+    margin-top: 100px;
+    margin-bottom: 100px;
+}
+table {
+    margin-top: 10px;
+    margin-bottom: 25px !important;
+}
+th, td { padding: 5px; }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE,
+                      fig.align='center'
+                      )
+```
+
+```{r library}
+library(tidyverse)
+library(lubridate)
+library(gtsummary)
+theme_set(theme_classic())
+theme_gtsummary_compact()
+```
+
+# Overall data selection
+## Sample types selection
+- collection_site_tissue_type == blood
+- sample_type == Buffy Coat, Genomic DNA, MNC, Unprocessed Liquid Tissue
+
+## Patient characteristics
+- primary_site_region_desc == "Lymphoma" &  
+  histology_desc == "Malignant lymphoma large b-cell diffuse nos"
+
+## Patient clinical data available
+- must have height value before first treatment
+- must have weight value before first treatment
+
+## Scans data available
+- must have a pet/ct scans before first treatment
+- OR
+- must have a contrast scans before first treatment  
+`r emo::ji("spiral_notepad")` *We have pet/ct (without IV contrast) or contrast scans (post contrast). IV contrast affects the density of muscle and possibly fat and mixing between these 2 image types in 1 cohort can be problematic and may cause a paper to be rejected that otherwise would have been accepted.*  
+Consequently, I performed 2 patient selections to look at how many patients we could include for each type of scans.
+
+## BMI categories
+- *Underweight and normal weight, Overweight, Obese* categories are created following
+$$
+Underweight and normal weight = bmi < 25
+Overweight = bmi ≥ 25 & bmi < 30
+Obese = bmi ≥ 30
+$$
+`r emo::ji("question_mark")`<span style="color:red">**I think you want to have a 2 categories BMI but I am not sure how you would like to group them.**</span>
+
+<br>
+
+# I. Patients with pet/ct scans before treatment
+```{r load data petct}
+lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_petct_10312023.rds")) %>% 
+  mutate_at(c("weight_kg", "bmi", "bmi_cat"), ~ case_when(
+           is.na(time_weight_tx_days)      ~ NA,
+           TRUE                            ~ .
+  )) %>% 
+  mutate_at(c("height_m", "bmi", "bmi_cat"), ~ case_when(
+           is.na(time_height_tx_days)      ~ NA,
+           TRUE                            ~ .
+  ))
+```
+These are some raw data to get an idea of the patients who are included
+```{r}
+lymphoma_data %>% 
+  select(age_at_diagnosis_num, gender_src_desc, 
+         race_cr_src_desc_1, ethnicity_src_desc, 
+         weight_kg, height_m, 
+         bmi, bmi_cat, 
+         stage_2018_seer_at_first_contact, 
+         stage_tnm_clin_group_2018_cd, 
+         stage_tnm_cs_mixed_group_desc) %>% 
+  tbl_summary() %>% 
+  bold_labels()
+```
+
+## 3.Time between pet/ct and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_petct_tx_days))+
+  geom_histogram(binwidth = 100, boundary = 0, closed = "left", position = "stack") +
+  labs(x="Time from pet/ct to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with pet/ct before treatment",
+       subtitle = "Most patients have a scan within 100 days before treatment 
+       1 patient has a scan 2013 days before treatment ",
+       caption = "Each bar represents 100 days")
+
+lymphoma_data %>%
+  select(time_petct_tx_days) %>% 
+  tbl_summary() %>% 
+  bold_labels()
+```
+
+## 4.Time between weight and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_weight_tx_days))+
+  geom_histogram(binwidth = 1, boundary = 0, closed = "left") +
+  scale_x_continuous(breaks = seq(0, 10, 2))+
+  labs(x="Time from weight to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with weight before treatment",
+       subtitle = "Most patients have a value within 1 day before treatment",
+       caption = "Each bar represents 1 days")
+
+lymphoma_data %>%
+  select(time_weight_tx_days) %>% 
+  tbl_summary(type = list(time_weight_tx_days ~ "continuous")) %>% 
+  bold_labels()
+```
+
+## 4.Time between height and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_height_tx_days))+
+  geom_histogram(binwidth = 20, boundary = 0, closed = "left") +
+  scale_x_continuous(breaks = seq(0, 100, 20))+
+  labs(x="Time from height to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with height before treatment",
+       subtitle = "Most patients have a value within 20 days before treatment",
+       caption = "Each bar represents 20 days")
+
+lymphoma_data %>%
+  select(time_height_tx_days) %>% 
+  tbl_summary() %>% 
+  bold_labels()
+```
+We lose 3 patients because height date is after treatment. Could we use a value collected after treatment?
+```{r, df_print: paged}
+lymphoma_data %>%
+  filter(is.na(time_height_tx_days)) %>% 
+  select(time_height_after_tx_days)
+```
+
+## 5. First treatment received
+Raw data
+```{r}
+lymphoma_data %>% 
+  select(drug_given_as_part_of_therapy_desc) %>% 
+  tbl_summary()
+```
+<br>
+
+# <span style="color:green">**We have 73 (potentially 76 if we accept later height date) patients with a pet/ct scan before the first treatment.**</span>
+
+<br>
+
+***
+<br>
+
+# II. Patients with contrast scans before treatment
+```{r load data contrast}
+lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_contrast_10312023.rds")) %>% 
+  mutate_at(c("weight_kg", "bmi", "bmi_cat"), ~ case_when(
+           is.na(time_weight_tx_days)      ~ NA,
+           TRUE                            ~ .
+  )) %>% 
+  mutate_at(c("height_m", "bmi", "bmi_cat"), ~ case_when(
+           is.na(time_height_tx_days)      ~ NA,
+           TRUE                            ~ .
+  ))
+```
+
+Same, these are some raw data to get an idea of the patients who are included
+```{r}
+lymphoma_data %>% 
+  select(age_at_diagnosis_num, gender_src_desc, 
+         race_cr_src_desc_1, ethnicity_src_desc, 
+         weight_kg, height_m, 
+         bmi, bmi_cat, 
+         stage_2018_seer_at_first_contact,
+         stage_tnm_clin_group_2018_cd, 
+         stage_tnm_cs_mixed_group_desc) %>% 
+  tbl_summary(type = list(age_at_diagnosis_num ~ "continuous")) %>% 
+  bold_labels()
+```
+
+## 3.Time between contrast and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_contrast_tx_days))+
+  geom_histogram(binwidth = 100, boundary = 0, closed = "left", position = "stack") +
+  scale_y_continuous(breaks = c(0, 1))+
+  labs(x="Time from contrast to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with contrast before treatment",
+       caption = "Each bar represents 100 days")
+
+lymphoma_data %>%
+  select(time_contrast_tx_days) %>% 
+  tbl_summary() %>% 
+  bold_labels()
+```
+
+## 4.Time between weight and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_weight_tx_days))+
+  geom_histogram(binwidth = 1, boundary = 0, closed = "left") +
+  scale_x_continuous(breaks = c(0, 1), limits = c(0,1.3))+
+  scale_y_continuous(breaks = c(0, 11))+
+  labs(x="Time from weight to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with weight before treatment",
+       subtitle = "All patients have a value within 1 day before treatment",
+       caption = "Each bar represents 1 days")
+
+lymphoma_data %>%
+  select(time_weight_tx_days) %>% 
+  tbl_summary(type = list(time_weight_tx_days ~ "continuous")) %>% 
+  bold_labels()
+```
+
+## 4.Time between height and treatment
+```{r}
+lymphoma_data %>%
+  ggplot(aes(x= time_height_tx_days))+
+  geom_histogram(binwidth = 20, boundary = 0, closed = "left") +
+  scale_x_continuous(breaks = seq(0, 100, 20))+
+  labs(x="Time from height to first treatment (in days)", 
+       y="Number of Patient",
+       title = "Patients with height before treatment",
+       subtitle = "Most patients have a value within 20 days before treatment",
+       caption = "Each bar represents 20 days")
+
+lymphoma_data %>%
+  select(time_height_tx_days) %>% 
+  tbl_summary(type = list(time_height_tx_days ~ "continuous")) %>% 
+  bold_labels()
+```
+
+## 5. First treatment received
+Raw data
+```{r}
+lymphoma_data %>% 
+  select(drug_given_as_part_of_therapy_desc) %>% 
+  tbl_summary()
+```
+
+# <span style="color:green">**We have 11 patients with a contrast scan before the first treatment.**</span>
+
+<br>
+
+***
+<br>
+
+`r emo::ji("spiral_notepad")` *For more ideal homogenous cohorts, it is best to stick to either pet/ct or contrast only within 1 cohort.  However, it might be acceptable to combine both if patient numbers are inadequate.*  
+Do we want to combine the 2 datasets?
+
+
