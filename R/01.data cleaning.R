@@ -170,12 +170,14 @@ lymphoma_data <- lymphoma_data %>%
          height_m = height / 39.37,
          bmi = weight_kg / (height_m * height_m)) %>%
   mutate(bmi_cat = case_when(
-    bmi < 25                    ~ "Underweight and normal weight",
+    bmi < 18.5                  ~ "Underweight",
+    bmi >= 18.5 &
+      bmi < 25                  ~ "Healthy",
     bmi >= 25 &
       bmi < 30                  ~ "Overweight",
     bmi >= 30                   ~ "Obese"
   )) %>%
-  mutate(bmi_cat = factor(bmi_cat, levels = c("Underweight and normal weight", "Overweight", "Obese"))) #%>% 
+  mutate(bmi_cat = factor(bmi_cat, levels = c("Underweight", "Healthy", "Overweight", "Obese"))) #%>% 
   # mutate(os_time_months = interval(
   #   start = first_treatment_dt, end = date) /
   #     duration(n=1, unit = "months"))

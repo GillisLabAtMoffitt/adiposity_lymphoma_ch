@@ -44,34 +44,50 @@ theme_gtsummary_compact()
 ```
 
 # Overall data selection
-## Sample types selection
+## Sample types selection (479 patients)
 - collection_site_tissue_type == blood
 - sample_type == Buffy Coat, Genomic DNA, MNC, Unprocessed Liquid Tissue
 
-## Patient characteristics
+## Patient characteristics (287 patients)
 - primary_site_region_desc == "Lymphoma" &  
   histology_desc == "Malignant lymphoma large b-cell diffuse nos"
 
 ## Patient clinical data available
-- must have height value before first treatment
-- must have weight value before first treatment
+- must have height value before first treatment (366)  
+- must have weight value before first treatment (370)  
 
-## Scans data available
-- must have a pet/ct scans before first treatment
+## Scans data available (384 patients have a scan)
+- must have a pet/ct scans before first treatment (383 patients)
 - OR
-- must have a contrast scans before first treatment  
+- must have a contrast scans before first treatment (56 patients)  
 `r emo::ji("spiral_notepad")` *We have pet/ct (without IV contrast) or contrast scans (post contrast). IV contrast affects the density of muscle and possibly fat and mixing between these 2 image types in 1 cohort can be problematic and may cause a paper to be rejected that otherwise would have been accepted.*  
 Consequently, I performed 2 patient selections to look at how many patients we could include for each type of scans.
 
+## Patient inclusion : numbers breakdown
+- Only 110 patients with the correct primary site & histology have DNA before first treatment. This is the step we lose the highest number of patients. I don't think there is a way to include more at this step.
+- From the 110 patients subset, we lose 4 patients who has NO height or weight (106 patients final)
+  - From the 106 patients subset,  
+    - 76 have a pet/ct scan before first treatment  
+    - 11 have a contrast scan before first treatment  
+Those are the essential filters, I don't think we can do anything to include more patients... like scans in the 10 next days but I don't think it would be correct and we would only include 3 patients with pet/ct and no patients with contrast).  
+`r emo::ji("light_bulb")`<span style="color:red">Any idea?</span>  
+
 ## BMI categories
-- *Underweight and normal weight, Overweight, Obese* categories are created following
+- *Underweight, Healthy, Overweight and Obese* categories are created following
 $$
-Underweight and normal weight = bmi < 25
+Underweight < 18.5
+Healthy = bmi ≥ 18.5 & bmi < 25
 Overweight = bmi ≥ 25 & bmi < 30
 Obese = bmi ≥ 30
 $$
-`r emo::ji("question_mark")`<span style="color:red">**I think you want to have a 2 categories BMI but I am not sure how you would like to group them.**</span>
-
+`r emo::ji("question_mark")`<span style="color:red">**I think you want to have a 2 BMI categories, healthy and obese.**</span>  
+Following the CDC categories :  
+*"If your BMI is less than 18.5, it falls within the underweight range. If your BMI is 18.5 to <25, it falls within the healthy weight range. If your BMI is 25.0 to <30, it falls within the overweight range. If your BMI is 30.0 or higher, it falls within the obesity range."*  
+<span style="color:orange">**I follow the official categories. You can find the numbers in the patient characteristics tables.**</span> 18 healthy + 22 obese with pet/ct and 2 healthy + 7 obese with contrast.  
+<span style="color:orange">**Then if you want overweight :** 32 patients with pet/ct and 2 patients with contrast.</span>  
+<!-- Collapsing categories might not be good anyway (there is an "obesity paradox" where overweight and obese individuals can have better outcomes - sometimes it is only overweight who show better outcomes - after a quick look in lymphoma, we might be able to collapse overweight and obese).**</span>.   -->
+<!-- https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4967417/   -->
+<!-- https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5903573/   -->
 <br>
 
 # I. Patients with pet/ct scans before treatment
@@ -84,7 +100,8 @@ lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_petct_10312023.rd
   mutate_at(c("height_m", "bmi", "bmi_cat"), ~ case_when(
            is.na(time_height_tx_days)      ~ NA,
            TRUE                            ~ .
-  ))
+  )) %>% 
+  mutate(time_height_tx_days = coalesce(time_height_tx_days, time_height_after_tx_days))
 ```
 These are some raw data to get an idea of the patients who are included
 ```{r}
@@ -141,11 +158,12 @@ lymphoma_data %>%
 lymphoma_data %>%
   ggplot(aes(x= time_height_tx_days))+
   geom_histogram(binwidth = 20, boundary = 0, closed = "left") +
-  scale_x_continuous(breaks = seq(0, 100, 20))+
+  scale_x_continuous(breaks = seq(-100, 100, 20))+
   labs(x="Time from height to first treatment (in days)", 
        y="Number of Patient",
        title = "Patients with height before treatment",
-       subtitle = "Most patients have a value within 20 days before treatment",
+       subtitle = "Most patients have a value within 20 days before treatment 
+       3 patients have height measurement after treatment (negative values)",
        caption = "Each bar represents 20 days")
 
 lymphoma_data %>%
@@ -153,10 +171,10 @@ lymphoma_data %>%
   tbl_summary() %>% 
   bold_labels()
 ```
-We lose 3 patients because height date is after treatment. Could we use a value collected after treatment?
+3 patients have height measurement after treatment. 
 ```{r, df_print: paged}
 lymphoma_data %>%
-  filter(is.na(time_height_tx_days)) %>% 
+  filter(!is.na(time_height_after_tx_days)) %>%
   select(time_height_after_tx_days)
 ```
 
@@ -169,7 +187,7 @@ lymphoma_data %>%
 ```
 <br>
 
-# <span style="color:green">**We have 73 (potentially 76 if we accept later height date) patients with a pet/ct scan before the first treatment.**</span>
+# <span style="color:green">**We have 76 patients with a pet/ct scan before the first treatment.**</span>
 
 <br>
 
