@@ -60,6 +60,15 @@ rm(scans_data, scans_type,
    scans_type_contrast, scans_type_petct)
 
 
+# Clinical
+clinical <- clinical %>% 
+  mutate(across(where(is.character), ~str_to_sentence(.))) %>% 
+  filter(primary_site_region_desc == "Lymphoma" &
+           histology_desc == "Malignant lymphoma large b-cell diffuse nos") %>% 
+  mutate(surgery_radiation_seq_num = na_if(surgery_radiation_seq_num, "Not appl")) %>% 
+  mutate(across(where(is.character), ~ na_if(., "Na")))
+
+
 ### DNA
 dna_data <- dna_data %>% 
   group_by(mrn, tissue_type, sample_family_id, specimen_collection_dt) %>% 
@@ -79,30 +88,23 @@ germline_dna <- dna_data %>%
               select(mrn, first_treatment_dt),
             by = "mrn") %>% 
   mutate(blood_bf_tx = case_when(
-    specimen_collection_dt <= first_treatment_dt        ~ "Blood before",
-    TRUE                                                ~ "No"
+    specimen_collection_dt <= (first_treatment_dt + days(14))        ~ "Blood before",
+    TRUE                                                            ~ "No"
   )) %>% 
   mutate(interval_blood_tx = case_when(
-    blood_bf_tx == "Blood before"                       ~ interval(
+    blood_bf_tx == "Blood before"                                   ~ interval(
       start = specimen_collection_dt, end = first_treatment_dt) /
       duration(n=1, unit = "days")
   )) %>% 
   arrange(mrn, interval_blood_tx) %>% 
-  distinct(mrn, .keep_all = TRUE) %>% 
   filter(!is.na(interval_blood_tx)) %>% 
+  distinct(mrn, .keep_all = TRUE) %>% 
   select(mrn, collection_dt_germline = specimen_collection_dt,
          sample_type_germline = sample_type, 
          sample_family_id_germline = sample_family_id,
          sample_id_germline = sample_id,
          -first_treatment_dt)
 
-# Clinical
-clinical <- clinical %>% 
-  mutate(across(where(is.character), ~str_to_sentence(.))) %>% 
-  filter(primary_site_region_desc == "Lymphoma" &
-           histology_desc == "Malignant lymphoma large b-cell diffuse nos") %>% 
-  mutate(surgery_radiation_seq_num = na_if(surgery_radiation_seq_num, "Not appl")) %>% 
-  mutate(across(where(is.character), ~ na_if(., "Na")))
 
 # Weight and height - select value before and closest to tx 
 height <- weight %>% 
@@ -153,17 +155,17 @@ bmi <- full_join(weight, height,
 lymphoma_data <- clinical %>% 
   inner_join(., germline_dna,
              by = "mrn") %>% 
-  inner_join(., bmi,
+  left_join(., bmi,
              by = "mrn")
 
-write_rds(lymphoma_data, "lymphoma data.rds")
+write_rds(lymphoma_data, "lymphoma_data_01082024.rds")
 
 rm(clinical, dna_data, germline_dna,
    height, weight, bmi)
 
 
 ################################################################################# III ### Create variables
-lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma data.rds"))
+lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_01082024.rds"))
 
 lymphoma_data <- lymphoma_data %>% 
   mutate(weight_kg = weight / 2.205,
@@ -183,7 +185,7 @@ lymphoma_data <- lymphoma_data %>%
   #     duration(n=1, unit = "months"))
   
 
-write_rds(lymphoma_data, "lymphoma data with new variables.rds")
+write_rds(lymphoma_data, "lymphoma data with new variables_01082024.rds")
 
 
 ################################################################################# IV ### Find patients fitting criteria
@@ -208,7 +210,7 @@ lymphoma_data_petct <- lymphoma_data_petct %>%
   distinct(mrn, .keep_all = TRUE)
 
 table(lymphoma_data_petct$bmi_cat)
-write_rds(lymphoma_data_petct, "lymphoma_data_petct_10312023.rds")
+write_rds(lymphoma_data_petct, "lymphoma_data_petct_01082024.rds")
 
 # Contrast
 lymphoma_data_contrast <- lymphoma_data %>% 
@@ -230,7 +232,7 @@ lymphoma_data_contrast <- lymphoma_data_contrast %>%
   arrange(mrn, time_contrast_tx_days) %>% 
   distinct(mrn, .keep_all = TRUE)
 
-write_rds(lymphoma_data_contrast, "lymphoma_data_contrast_10312023.rds")
+write_rds(lymphoma_data_contrast, "lymphoma_data_contrast_01082024.rds")
 table(lymphoma_data_contrast$bmi_cat)
 
 

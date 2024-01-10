@@ -47,10 +47,12 @@ theme_gtsummary_compact()
 ## Sample types selection (479 patients)
 - collection_site_tissue_type == blood
 - sample_type == Buffy Coat, Genomic DNA, MNC, Unprocessed Liquid Tissue
+- 144 blood samples before treatment first date + 5 days
 
-## Patient characteristics (287 patients)
+## Patient characteristics (385 patients)
 - primary_site_region_desc == "Lymphoma" &  
   histology_desc == "Malignant lymphoma large b-cell diffuse nos"
+- 287 patients fit criteria
 
 ## Patient clinical data available
 - must have height value before first treatment (366)  
@@ -64,11 +66,11 @@ theme_gtsummary_compact()
 Consequently, I performed 2 patient selections to look at how many patients we could include for each type of scans.
 
 ## Patient inclusion : numbers breakdown
-- Only 110 patients with the correct primary site & histology have DNA before first treatment. This is the step we lose the highest number of patients. I don't think there is a way to include more at this step.
-- From the 110 patients subset, we lose 4 patients who has NO height or weight (106 patients final)
-  - From the 106 patients subset,  
-    - 76 have a pet/ct scan before first treatment  
-    - 11 have a contrast scan before first treatment  
+* Only 114 patients with the correct primary site & histology have DNA before first treatment. This is the step we lose the highest number of patients. I don't think there is a way to include more at this step.
+- ~~From the 117 patients subset, we lose 4 patients who has NO height or weight (106 patients final)~~
+  - From the 117 patients subset,  
+    - 114 have a pet/ct scan but 81 are before first treatment  
+    - 12 have a contrast scan and are before first treatment  
 Those are the essential filters, I don't think we can do anything to include more patients... like scans in the 10 next days but I don't think it would be correct and we would only include 3 patients with pet/ct and no patients with contrast).  
 `r emo::ji("light_bulb")`<span style="color:red">Any idea?</span>  
 
@@ -92,7 +94,7 @@ Following the CDC categories :
 
 # I. Patients with pet/ct scans before treatment
 ```{r load data petct}
-lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_petct_10312023.rds")) %>% 
+lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_petct_01082024.rds")) %>% 
   mutate_at(c("weight_kg", "bmi", "bmi_cat"), ~ case_when(
            is.na(time_weight_tx_days)      ~ NA,
            TRUE                            ~ .
@@ -187,7 +189,7 @@ lymphoma_data %>%
 ```
 <br>
 
-# <span style="color:green">**We have 76 patients with a pet/ct scan before the first treatment.**</span>
+# <span style="color:green">**We have 81 patients with a pet/ct scan before the first treatment.**</span>
 
 <br>
 
@@ -196,7 +198,7 @@ lymphoma_data %>%
 
 # II. Patients with contrast scans before treatment
 ```{r load data contrast}
-lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_contrast_10312023.rds")) %>% 
+lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_contrast_01082024.rds")) %>% 
   mutate_at(c("weight_kg", "bmi", "bmi_cat"), ~ case_when(
            is.na(time_weight_tx_days)      ~ NA,
            TRUE                            ~ .
@@ -283,7 +285,7 @@ lymphoma_data %>%
   tbl_summary()
 ```
 
-# <span style="color:green">**We have 11 patients with a contrast scan before the first treatment.**</span>
+# <span style="color:green">**We have 12 patients with a contrast scan before the first treatment.**</span>
 
 <br>
 
