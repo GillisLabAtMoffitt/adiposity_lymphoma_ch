@@ -88,7 +88,7 @@ germline_dna <- dna_data %>%
               select(mrn, first_treatment_dt),
             by = "mrn") %>% 
   mutate(blood_bf_tx = case_when(
-    specimen_collection_dt <= (first_treatment_dt + days(14))        ~ "Blood before",
+    specimen_collection_dt <= (first_treatment_dt + days(7))        ~ "Blood before",
     TRUE                                                            ~ "No"
   )) %>% 
   mutate(interval_blood_tx = case_when(
@@ -158,7 +158,7 @@ lymphoma_data <- clinical %>%
   left_join(., bmi,
              by = "mrn")
 
-write_rds(lymphoma_data, "lymphoma_data_01082024.rds")
+write_rds(lymphoma_data, paste0("lymphoma_data_", today(), ".rds"))
 
 rm(clinical, dna_data, germline_dna,
    height, weight, bmi)
@@ -185,7 +185,7 @@ lymphoma_data <- lymphoma_data %>%
   #     duration(n=1, unit = "months"))
   
 
-write_rds(lymphoma_data, "lymphoma data with new variables_01082024.rds")
+write_rds(lymphoma_data, "lymphoma data with new variables_", today(), ".rds")
 
 
 ################################################################################# IV ### Find patients fitting criteria
@@ -199,18 +199,17 @@ lymphoma_data_petct <- lymphoma_data_petct %>%
     petct_scans_date <= first_treatment_dt              ~ "Scan before",
     TRUE                                                ~ "No"
   )) %>% 
-  mutate(time_petct_tx_days = case_when(
-    petct_bf_tx == "Scan before"                        ~ interval(
+  mutate(time_petct_tx_days = interval(
       start = petct_scans_date, end = treatment_start_dt) /
       duration(n=1, unit = "days")
-  )) %>% 
+  ) %>% 
   # select(mrn,petct_scans_date, petct_bf_tx, treatment_start_dt, time_petct_tx_days) %>% 
-  filter(!is.na(time_petct_tx_days)) %>% 
+  filter(petct_bf_tx == "Scan before") %>% 
   arrange(mrn, time_petct_tx_days) %>% 
   distinct(mrn, .keep_all = TRUE)
 
 table(lymphoma_data_petct$bmi_cat)
-write_rds(lymphoma_data_petct, "lymphoma_data_petct_01082024.rds")
+write_rds(lymphoma_data_petct, paste0("lymphoma_data_petct_", today(), ".rds"))
 
 # Contrast
 lymphoma_data_contrast <- lymphoma_data %>% 
@@ -222,17 +221,16 @@ lymphoma_data_contrast <- lymphoma_data_contrast %>%
     contrast_scans_date <= first_treatment_dt           ~ "Scan before",
     TRUE                                                ~ "No"
   )) %>% 
-  mutate(time_contrast_tx_days = case_when(
-    contrast_bf_tx == "Scan before"                        ~ interval(
+  mutate(time_contrast_tx_days = interval(
       start = contrast_scans_date, end = treatment_start_dt) /
       duration(n=1, unit = "days")
-  )) %>% 
+  ) %>% 
   # select(mrn,contrast_scans_date, contrast_bf_tx, treatment_start_dt, time_contrast_tx_days) %>% 
-  filter(!is.na(time_contrast_tx_days)) %>% 
+  filter(contrast_bf_tx == "Scan before") %>% 
   arrange(mrn, time_contrast_tx_days) %>% 
   distinct(mrn, .keep_all = TRUE)
 
-write_rds(lymphoma_data_contrast, "lymphoma_data_contrast_01082024.rds")
+write_rds(lymphoma_data_contrast, paste0("lymphoma_data_contrast_", today(), ".rds"))
 table(lymphoma_data_contrast$bmi_cat)
 
 
