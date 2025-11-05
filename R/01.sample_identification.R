@@ -2,39 +2,58 @@
 library(tidyverse)
 library(lubridate)
 
+# The samples identification code was run using the data dated from 20231010
+# No need to run this part anymore unless we want to include more potential samples
+# using a later dated file
 
 ################################################################################# I ### Load data
-path <- fs::path("", "Volumes", "Gillis_Research","Christelle Colin-Leitzinger", "adiposity_lymphoma_ch")
+path <- fs::path("", "Volumes", "Gillis_Research",
+                 "Lab_Data", "LymphomaObesity")
 
 scans_data <- 
-  readxl::read_xlsx(paste0(here::here(), "/10R23000188_20231010_outfile_updated.xlsx"),
-                    sheet = "PET_CT scans"
+  readxl::read_xlsx(paste0(
+    # path, "/RawData",
+    here::here(), "/data/raw data",
+    "/Lymphoma_ClinicalData_10R23000188_20231010.xlsx"), # 10R23000188_20231010_outfile_updated.xlsx
+    sheet = "PET_CT scans"
   ) %>% 
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
 
 scans_type <- 
-  readxl::read_xlsx(paste0(here::here(), "/Lymphoma obesity_Imaging types_08.22.23dj.xlsx")
+  readxl::read_xlsx(paste0(
+    # path, "/ProcessedData",
+    here::here(), "/data/processed data",
+    "/Lymphoma_ImagingTypes_20230822.xlsx")
   ) %>% 
   janitor::clean_names()
 
 dna_data <- 
-  readxl::read_xlsx(paste0(here::here(), "/10R23000188_20231010_outfile_updated.xlsx"),
-                    sheet = "BioBanking Data"
+  readxl::read_xlsx(paste0(
+    # path, "/RawData",
+    here::here(), "/data/raw data",
+    "/Lymphoma_ClinicalData_10R23000188_20231010.xlsx"),
+    sheet = "BioBanking Data"
   ) %>% 
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
 
 clinical <- 
-  readxl::read_xlsx(paste0(here::here(), "/10R23000188_20231010_outfile_updated.xlsx"),
-                    sheet = "Cancer Registry"
+  readxl::read_xlsx(paste0(
+    # path, "/RawData",
+    here::here(), "/data/raw data",
+    "/Lymphoma_ClinicalData_10R23000188_20231010.xlsx"),
+    sheet = "Cancer Registry"
   ) %>% 
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
 
 weight <- 
-  readxl::read_xlsx(paste0(here::here(), "/10R23000188_20231010_outfile_updated.xlsx"),
-                    sheet = "HT_WT "
+  readxl::read_xlsx(paste0(
+    # path, "/RawData",
+    here::here(), "/data/raw data",
+    "/Lymphoma_ClinicalData_10R23000188_20231010.xlsx"),
+    sheet = "HT_WT "
   ) %>% 
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
@@ -165,7 +184,7 @@ rm(clinical, dna_data, germline_dna,
 
 
 ################################################################################# III ### Create variables
-lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_01082024.rds"))
+# lymphoma_data <- read_rds(paste0(here::here(), "/lymphoma_data_01082024.rds"))
 
 lymphoma_data <- lymphoma_data %>% 
   mutate(weight_kg = weight / 2.205,
