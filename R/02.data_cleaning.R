@@ -55,7 +55,7 @@ body_comp <-
   janitor::clean_names()
 
 
-ch_calls <- 
+sample_list <- 
   readxl::read_xlsx(paste0(# path,
     here::here(), "/data/raw data",
     "/Lymphoma_Shipping Manifest_EXP2052DNA_PHI_20240504.xlsx"), 
@@ -83,8 +83,8 @@ samples_selected <- samples_selected %>%
 
 ch_mutation <- ch_mutation %>% 
   mutate(ch_status = factor(ch_status, levels = c("No CH", "CH")))
-ch_calls <- ch_calls %>% 
-  select(mrn : ncol(ch_calls)) %>% 
+sample_list <- sample_list %>% 
+  select(mrn : ncol(sample_list)) %>% 
   full_join(ch_mutation %>% 
               select(source_sample_id, ch_status) %>% 
               distinct(), .,
@@ -113,7 +113,7 @@ body_comp <- body_comp %>%
 # Weight and height - select value before and closest to tx 
 # I am re-doing this step with the new updated data received
 weight <- weight %>% 
-  filter(str_detect(mrn, paste0(ch_calls$mrn, collapse = "|"))) %>% 
+  filter(str_detect(mrn, paste0(sample_list$mrn, collapse = "|"))) %>% 
   left_join(., body_comp %>% 
             select(mrn, scan_date),
           by = "mrn") %>% 
@@ -172,7 +172,7 @@ bmi <- full_join(weight, height,
                  by = c("mrn")) %>% 
   filter(!is.na(weight) & !is.na(height))
 
-lymphoma_data <- ch_calls %>% 
+lymphoma_data <- sample_list %>% 
   left_join(., clinical,
             by = c("mrn", "tumor_id")) %>% 
   left_join(., vitals,

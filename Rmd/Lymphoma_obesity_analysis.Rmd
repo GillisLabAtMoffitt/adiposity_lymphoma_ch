@@ -48,24 +48,42 @@ div.darkblue { background-color:#0099CC; border-radius: 5px; padding: 20px; font
 lymphoma_data <- read_rds(paste0(here::here(), 
                             "/data/processed data",
                             "/Lymphoma_Data_20251104.rds"))
+path <- fs::path("", "Volumes", "Gillis_Research",
+                 "Lab_Data", "LymphomaObesity")
+sample_list <- 
+  readxl::read_xlsx(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_Shipping Manifest_EXP2052DNA_PHI_20240504.xlsx"), 
+    sheet = "Shipping Manifest_w PHI") %>% 
+  janitor::clean_names()
+ch_mutation <- 
+  readxl::read_xlsx(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_CHcalls_20251021.xlsx"), 
+    na = "NA") %>% 
+  janitor::clean_names()
 ```
 
 ```{r}
+lymphoma_data <- lymphoma_data %>% 
+  mutate(race = factor(race, levels = c("White", "Other")))
+
 lymphoma_data <- lymphoma_data %>% 
   # Index
   mutate(across(c(ends_with("_cm2")
                   ), ~ . / (height_m ^2), 
                 .names = "{.col}_index")) %>% 
+  rename(smi = muscle_cm2_index) %>% 
   # Sarcopenia
   mutate(sarcopenia = case_when(
     sex == "Female" &
-      muscle_cm2_index >= 38.5                         ~ "≥ cutoff",
+      smi >= 38.5                         ~ "≥ cutoff",
     sex == "Female" &
-      muscle_cm2_index < 38.5                          ~ "Sarcopenia",
+      smi < 38.5                          ~ "Sarcopenia",
     sex == "Male" &
-      muscle_cm2_index >= 52.4                         ~ "≥ cutoff",
+      smi >= 52.4                         ~ "≥ cutoff",
     sex == "Male" &
-      muscle_cm2_index < 52.4                          ~ "Sarcopenia"
+      smi < 52.4                          ~ "Sarcopenia"
   )) %>%
   # Myosteatosis - skeletal muscle fat infiltration
   mutate(myosteatosis = case_when(
@@ -83,6 +101,12 @@ lymphoma_data <- lymphoma_data %>%
     is.na(imat_cm2)                       ~ NA_real_,
     TRUE                                  ~ vat_cm2 + sat_cm2 + imat_cm2
   )) %>% 
+  mutate(tat_cm2_index = case_when(
+    is.na(vat_cm2_index) |
+    is.na(sat_cm2_index) |
+    is.na(imat_cm2_index)                 ~ NA_real_,
+    TRUE                                  ~ vat_cm2_index + sat_cm2_index + imat_cm2_index
+  )) %>% 
   # V/S ratio
   mutate(v_s_ratio = vat_cm2 / sat_cm2) %>% 
   # Proportion - remove the values if one feature is NA
@@ -98,17 +122,29 @@ lymphoma_data <- lymphoma_data %>%
   mutate(imat_proportion = imat_cm2 / 
            (muscle_cm2 + vat_cm2 +
               sat_cm2 + imat_cm2)) %>% 
+  # mutate(muscle_proportionindex = smi / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(vat_proportionindex = vat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(sat_proportionindex = sat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(imat_proportionindex = imat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
   mutate(across(c(contains("_proportion")), ~ case_when(
     is.na(muscle_cm2) |
     is.na(vat_cm2) |
     is.na(sat_cm2) |
     is.na(imat_cm2)                    ~ NA_real_,
-    TRUE                                             ~ .
+    TRUE                               ~ .
   )))
 
 lymphoma_data <- lymphoma_data %>% 
   # Make categorical var
-  mutate(across(c(ends_with("_index"),
+  mutate(across(c(smi, ends_with("_index"),
                   "muscle_hu",
                   "vat_cm2", "sat_cm2", "imat_cm2",
                   "tat_cm2",
@@ -122,6 +158,69 @@ lymphoma_data <- lymphoma_data %>%
   mutate(across(c(ends_with("_tertcat")), 
                 ~ factor(., levels = 
                            c("Low", "Medium", "High"))))
+
+lymphoma_data <- lymphoma_data %>% 
+  # Make 1-standard deviation increase of the feature
+  mutate(across(c("muscle_hu", "muscle_cm2",
+                  "vat_cm2", "sat_cm2", "imat_cm2",
+                  "tat_cm2"#,
+                  # contains("_proportion")
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
+
+lymphoma_data <- lymphoma_data %>% 
+  # Make 1-standard deviation increase of the height indexed feature
+  mutate(across(c("smi",
+                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+                  "tat_cm2_index"#,
+                  # contains("_proportion")
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+
+lymphoma_data <- lymphoma_data %>% 
+  # Make 1-standard deviation increase of the height indexed feature
+  mutate(across(c(contains("_proportion") & where(is.numeric)
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+```
+
+```{r}
+ch_mutation <- ch_mutation %>% 
+  inner_join(sample_list %>%
+              select(source_sample_id, mrn) %>%
+              distinct(), .,
+            by = "source_sample_id") %>% 
+  mutate(mrn = as.character(mrn))
+
+library(fastDummies)
+ch_mutation1 <- ch_mutation %>% 
+  filter(!is.na(gene)) %>% 
+  select(mrn, gene, variant_p) %>% 
+  unite(mutation_variant, c(gene, variant_p)) %>%
+  distinct()
+
+mutation_variant_wide <- dummy_cols(.data = ch_mutation1, select_columns = "mutation_variant",
+                                    remove_selected_columns = TRUE,
+                                    omit_colname_prefix = FALSE, ignore_na = TRUE) %>%
+  group_by(mrn) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+ch_mutation1 <- ch_mutation %>% 
+  filter(!is.na(gene)) %>% 
+  select(mrn, mutation_gene = gene) %>% 
+  distinct()
+
+mutation_gene_wide <- dummy_cols(.data = ch_mutation1, select_columns = "mutation_gene",
+                                    remove_selected_columns = TRUE,
+                                    omit_colname_prefix = FALSE, ignore_na = TRUE) %>%
+  group_by(mrn) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+lymphoma_data <- lymphoma_data %>%
+  full_join(., mutation_variant_wide, by = "mrn") %>%
+  full_join(., mutation_gene_wide, by = "mrn") %>%
+  mutate(across(c(starts_with("mutation_variant") | 
+                    starts_with("mutation_gene")
+                  ), .fns = ~ replace_na(., 0)))
 ```
 
 ```{r Labeling data}
@@ -136,6 +235,29 @@ var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
                                  bsa_cat = "BSA (categorical)",
                                  weight_kg = "Weight (kg)",
                                  height_m = "Height (m)",
+                                 
+                                 v_s_ratio = "V/S ratio",
+                                 tat_cm2 = "TAT",
+                                 smi = "SMI",
+                                 sarcopenia = "Sarcopenia",
+                                 vat_cm2_index = "VAT (index)",
+                                 sat_cm2_index = "SAT (index)",
+                                 imat_cm2_index = "IMAT (index)",
+                                 tat_cm2_index = "TAT (index)",
+                                 muscle_proportion = "Muscle proportion",
+                                 vat_proportion = "VAT proportion",
+                                 sat_proportion = "SAT proportion",
+                                 imat_proportion = "IMAT proportion",
+                                 
+                                 smisdhr = "SMI",
+                                 vat_cm2_indexsdhr = "VAT (index)",
+                                 sat_cm2_indexsdhr = "SAT (index)",
+                                 imat_cm2_indexsdhr = "IMAT (index)",
+                                 muscle_proportionsdhr = "Muscle proportion",
+                                 vat_proportionsdhr = "VAT proportion",
+                                 sat_proportionsdhr = "SAT proportion",
+                                 imat_proportionsdhr = "IMAT proportion",
+                                 
                                  os_event = "Deaths",
                                  os_time_from_treatment_months = "Follow-up time from treatment (months)",
                                  ch_status = "CH status"
@@ -166,8 +288,39 @@ lymphoma_data %>%
                 all_stat_cols() ~ "**{level}**, N = {n}")
 ```
 
-# II. Body composition features by BMI
-Actual body composition feature don't follow BMI. 
+# II. BMI, Survival and Body composition
+It was described that BMI is not the best predictor for survival. While we would expect patients present in the highest BMI group (≥30) to have the worse survival, they often show a better survival than patient within the middle BMI group (≥25 - <30).
+```{r KM OS BMI}
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ bmi_cat,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+           palette = c("#000004FF", "#8C2981FF", "#FE9F6DFF"), #"aaas",
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ bmi_cat,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_header(label ~ "**Survival association with BMI**")
+```
+
+Also, BMI is not the best representation of the actual body composition.   
+For example, in our cohort, the highest median value for muscle HU (radiodensity) belong to the patients in the middle BMI category (≥25 - <30).
+SAT values are similar between these patients and patients in the high BMI category (≥30).
 ```{r Body composition plot, fig.height=5}
 lymphoma_data %>% 
   select(mrn,
@@ -177,6 +330,8 @@ lymphoma_data %>%
          ) %>%
   filter(!is.na(bmi_cat)) %>% 
   pivot_longer(-c(mrn, bmi_cat)) %>% 
+  mutate(name = factor(name, levels = c("muscle_hu", "muscle_cm2", 
+                                        "vat_cm2", "sat_cm2", "imat_cm2"))) %>% 
   ggplot(aes(x= bmi_cat, y= value, color = bmi_cat))+
   geom_boxplot()+
   labs(x = "BMI (categories)", y = "Body composition values")+
@@ -191,7 +346,6 @@ lymphoma_data %>%
 # III. Body composition features by CH status
 
 Most patients (82) have thickness of 3.75 which is often used for Pet/CT so this looks normal. A couple of patient have smaller thickness and 12 have higher thickness value.   
-The variables in grey are usually not included in analysis as they don't have meaningful interpretation. I added them here for completeness only.   
 
 <br>
 
@@ -201,54 +355,111 @@ Dan suggested to :
 - Look at muscle_hu are Hounsfield unit and measure radiodensity. It is important in case of oedema, scaring. It is muscle radiomics, it reflect the muscle quality.    
 - Calculate V/S ratio which is VAT divided by SAT.  
 - Calculate TAT or total fat tissue (VAT+SAT+IMAT).   
-- Calculate tissue proportion (for variable A, we divide variable A by the addition of all the tissue combined muscle+VAT+SAT+IMAT).   
+- Calculate tissue proportion (for variable A, we divide variable A by the sum of all the tissue combined muscle+VAT+SAT+IMAT).   
+Another thing done in papers is that they used 1-standard deviation increase (z-score) of the feature in the Cox regression model.
+
+<br>
 
 ```{r Body composition table}
-tbl <- lymphoma_data %>%
+tbl_raw <- lymphoma_data %>%
   select(muscle_cm2, imat_cm2, vat_cm2, sat_cm2, 
          muscle_hu, myosteatosis,
-         muscle_cm2_index, sarcopenia,
-         ends_with("_index"), 
          v_s_ratio, tat_cm2,
-         ends_with("_proportion"),
-         ends_with("_tertcat"),
-         imat_hu, vat_hu, sat_hu,
-         muscle_sd, imat_sd, vat_sd,
-         sat_sd,
+         # ends_with("_tertcat"),
+         # imat_hu, vat_hu, sat_hu,
+         # muscle_sd, imat_sd, vat_sd,
+         # sat_sd,
          ch_status
          ) %>%
-  tbl_summary(by = ch_status) %>%
+  tbl_summary(by = ch_status,
+              statistic = list(all_continuous() ~ "{median} [{sd}] ({p25}, {p75})", 
+                               all_categorical() ~"{n} ({p}%)")) %>%
   bold_labels() %>%
   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
   modify_header(label ~ "**Body composition**",
                 all_stat_cols() ~ "**{level}**, N = {n}")
 
-gt_tbl <- tbl |> as_gt(#rownames_to_stub = TRUE
-                       )
+# tbl_sdhr <- lymphoma_data %>%
+#   select(ends_with("_sdhr"), 
+#          ch_status
+#          ) %>%
+#   tbl_summary(by = ch_status,
+#               statistic = list(all_continuous() ~ "{median} ({p25}, {p75})", 
+#                                all_categorical() ~"{n} ({p}%)")) %>%
+#   bold_labels() %>%
+#   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+#   modify_header(label ~ "**Body composition**",
+#                 all_stat_cols() ~ "**{level}**, N = {n}")
 
-gt_tbl %>% 
-  # data_color(
-  #   columns = everything(),
-  #   rows = 10:21,
-  #   # rows = ends_with("SMI"),
-  #   palette = "lightblue", na_color = "lightblue"
-  # ) %>%
-  # data_color(
-  #   columns = everything(),
-  #   rows = 24,
-  #   # rows = ends_with("SMI"),
-  #   palette = "blue", na_color = "blue"
-  # ) %>%
-  tab_style(
-    style = cell_text(color = "lightgrey"),
-    locations = cells_body(rows = variable %in% 
-                             c("imat_hu", "vat_hu", "sat_hu",
-                               "muscle_sd", "imat_sd", "vat_sd",
-                               "sat_sd"))
-  )
+tbl_index <- lymphoma_data %>%
+  select(smi, sarcopenia,
+         vat_cm2_index, sat_cm2_index, imat_cm2_index, tat_cm2_index, 
+         ch_status
+         ) %>%
+  tbl_summary(by = ch_status,
+              statistic = list(all_continuous() ~ "{median} [{sd}] ({p25}, {p75})", 
+                               all_categorical() ~"{n} ({p}%)")) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+  modify_header(label ~ "**Body composition**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+
+# tbl_indexsdhr <- lymphoma_data %>%
+#   select(ends_with("_indexsdhr"), 
+#          ch_status
+#          ) %>%
+#   tbl_summary(by = ch_status,
+#               statistic = list(all_continuous() ~ "{median} [{sd}] ({p25}, {p75})", 
+#                                all_categorical() ~"{n} ({p}%)")) %>%
+#   bold_labels() %>%
+#   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+#   modify_header(label ~ "**Body composition**",
+#                 all_stat_cols() ~ "**{level}**, N = {n}")
+
+tbl_prop <- lymphoma_data %>%
+  select(ends_with("_proportion"),
+         ch_status
+         ) %>%
+  tbl_summary(by = ch_status,
+              statistic = list(all_continuous() ~ "{median} [{sd}] ({min}, {max})", 
+                               all_categorical() ~"{n} ({p}%)")) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+  modify_header(label ~ "**Body composition**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+
+# tbl_propindex <- lymphoma_data %>% # Using height indexed values generate more missing data if height is NA
+#   select(ends_with("_proportionindex"),
+#          ch_status
+#          ) %>%
+#   tbl_summary(by = ch_status,
+#               statistic = list(all_continuous() ~ "{median} [{sd}] ({min}, {max})",
+#                                all_categorical() ~"{n} ({p}%)")) %>%
+#   bold_labels() %>%
+#   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>%
+#   modify_header(label ~ "**Body composition**",
+#                 all_stat_cols() ~ "**{level}**, N = {n}")
 ```
 
-I just plotted the original features by CH status. Will update once we figure out the best features to show.
+
+```{r gt table}
+gt_tbl <- tbl_stack(list(tbl_raw, tbl_index, tbl_prop), 
+                    group_header = c("Raw features", 
+                                     "Indexed features", 
+                                     "Tissue proportion")) %>%
+  as_gt(#rownames_to_stub = TRUE
+  ) %>%
+  gt::tab_options(row_group.border.top.color = "black",
+                  row_group.border.top.width = 3,
+                  row_group.border.bottom.color = "darkgrey",
+                  row_group.font.size = 15,
+                  row_group.font.weight = "bold",
+                  row_group.text_transform = "uppercase",
+                  row_group.background.color = "grey")
+gt_tbl
+```
+
+I plotted the original features by CH status. Will update once we figure out the best features to show.
 ```{r Body composition plot by CH, fig.height=4}
 lymphoma_data %>% 
   select(mrn,
@@ -258,6 +469,8 @@ lymphoma_data %>%
          ch_status
          ) %>%
   pivot_longer(-c(mrn, bmi_cat, ch_status)) %>% 
+  mutate(name = factor(name, levels = c("muscle_hu", "muscle_cm2", 
+                                        "vat_cm2", "sat_cm2", "imat_cm2"))) %>% 
   ggplot(aes(x= ch_status, y= value, color = ch_status))+
   geom_boxplot()+
   labs(x = "CH status", y = "Body composition values")+
@@ -272,19 +485,10 @@ lymphoma_data %>%
 
 # IV. CH and Body composition - glm logistic regression
 In the CH table, some feature distributions seems to be different.   
-imat_cm2_index, vat_cm2_index (continuous and tertiles)   
-v_s_ratio (tertiles only)     
-vat_proportion (continuous and tertiles), sat_proportion (continuous and tertiles), imat_proportion (tertiles only)    
+IMAT, VAT for indexed features, and VAT, SAT for abdominal proportion (trend pvalue > 0.05 & < 0.1, only VAT abdominal pvalue < 0.05).
 
-I ran the logistic regression with the clinical factor without or with :   
-the indexed values;   
-the V/S ratio (categorical);   
-the tissue proportion variables  (continuous and categorical).   
-
-I am not sure if I always need to include them all for each model (muscle, imat, sat, vat) or if i should just add 1 of the factor...
-I will go through the papers to see exactely how they do it.
-
-Also should I do the contrary (predicting VAT for example with CH status as predictor)?
+## Regression for association with CH status
+### Clinical
 ```{r}
 glm(ch_status ~
       age_at_diagnosis_num + sex + race,
@@ -293,24 +497,82 @@ glm(ch_status ~
   tbl_regression(exponentiate = TRUE,
                  intercept = TRUE) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
+```
 
+### BMI
+https://ashpublications.org/blood/article/144/Supplement%201/872/531065/Mutation-Specific-Differences-in-the-Relationship
+In UKBB analyses, we identified genotype-specific patterns of association between BMI and the presence of CH mutations. JAK2 (OR 0.51; 95% CI 0.27-0.96; p=0.036) and DNMT3A mutations (OR 0.92; 95% CI 0.87-0.97; p=0.0028) were negatively associated with a BMI >30 relative to BMI <25, whereas mutations in ASXL1(OR 1.40; 95% CI 1.23-1.60; p=8.8x10-7) and TET2 (OR 1.16; 95% CI 1.04-1.31; p=0.0095) were positively associated with BMI >30.
+
+```{r}
 glm(ch_status ~
-      age_at_diagnosis_num + sex +
-          muscle_cm2_index + vat_cm2_index + sat_cm2_index + imat_cm2_index,
+      age_at_diagnosis_num + sex + race + bmi,
     family = "binomial",
     data = lymphoma_data) %>%
   tbl_regression(exponentiate = TRUE,
                  intercept = TRUE) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
-
 glm(ch_status ~
-      age_at_diagnosis_num + sex +
-          v_s_ratio_tertcat,
+      bmi,
     family = "binomial",
     data = lymphoma_data) %>%
   tbl_regression(exponentiate = TRUE,
                  intercept = TRUE) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
+```
+
+### Association with height-indexed body composition features
+Association estimates are reported per 1-SD increase in the body composition metric.   
+VAT and IMAT show a trend toward a positive association with the presence of CH mutations.   
+Additional adjustment for Age and Sex show similar results.
+```{r}
+# glm(ch_status ~
+#       # age_at_diagnosis_num + sex +
+#           smi + vat_cm2_index + sat_cm2_index + imat_cm2_index,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE,
+#                  intercept = TRUE) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          smisdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          vat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          sat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          imat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+# glm(ch_status ~
+#       # age_at_diagnosis_num + sex +
+#           v_s_ratio_tertcat,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE,
+#                  intercept = TRUE) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
 
 # glm(ch_status ~
 #       age_at_diagnosis_num + sex +
@@ -320,24 +582,287 @@ glm(ch_status ~
 #   tbl_regression(exponentiate = TRUE,
 #                  intercept = TRUE) %>%
 #   modify_spanning_header(everything() ~ "Regression for CH status")
+```
 
+### Association with body composition proportion
+Association estimates are reported per 1-SD increase in the body composition metric.   
+Additional adjustment for Age and Sex exhibit similar results.
+```{r}
+# glm(ch_status ~
+#       # age_at_diagnosis_num + sex +
+#           muscle_proportion + vat_proportion + sat_proportion + imat_proportion,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE,
+#                  intercept = TRUE) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
-      age_at_diagnosis_num + sex +
-          muscle_proportion + vat_proportion + sat_proportion + imat_proportion,
+      # age_at_diagnosis_num + sex +
+          muscle_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          vat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          sat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      # age_at_diagnosis_num + sex +
+          imat_proportionsdhr,
     family = "binomial",
     data = lymphoma_data) %>%
   tbl_regression(exponentiate = TRUE,
                  intercept = TRUE) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 
-glm(ch_status ~
-      age_at_diagnosis_num + sex +
-          muscle_proportion_tertcat + vat_proportion_tertcat + sat_proportion_tertcat + imat_proportion_tertcat,
+# glm(ch_status ~
+#       age_at_diagnosis_num + sex +
+#           muscle_proportion_tertcat + vat_proportion_tertcat + sat_proportion_tertcat + imat_proportion_tertcat,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE,
+#                  intercept = TRUE) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
+```
+
+## Regression for association with CH gene mutations
+```{r}
+lymphoma_data %>%
+  select(starts_with("mutation_gene")) %>%
+  `colnames<-`(str_remove_all(colnames(.), "mutation_gene_")) %>% 
+  tbl_summary() %>%
+  bold_labels() %>% 
+  modify_header(label ~ "**CH mutations**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+```
+
+### BMI
+```{r}
+glm(mutation_gene_DNMT3A ~
+      bmi,
     family = "binomial",
     data = lymphoma_data) %>%
   tbl_regression(exponentiate = TRUE,
                  intercept = TRUE) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
+  modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
+glm(mutation_gene_TET2 ~
+      bmi,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for TET2 mutation")
+```
+
+### Association with height-indexed body composition features
+Association estimates are reported per 1-SD increase in the body composition metric.   
+Mutations in DNMT3A (OR 1.59) seem to be positively associated with higher VAT.
+```{r}
+tbl_dnmt3a_muscle <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          smisdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p() %>%
+  modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
+tbl_dnmt3a_vat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          vat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_dnmt3a_sat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          sat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_dnmt3a_imat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          imat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+
+tbl_tet2_muscle <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          smisdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  modify_spanning_header(everything() ~ "Regression for TET2 mutation")
+tbl_tet2_vat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          vat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_tet2_sat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          sat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_tet2_imat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          imat_cm2_indexsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+
+tbl_muscle <- tbl_merge(list(tbl_dnmt3a_muscle, tbl_tet2_muscle), 
+                        tab_spanner = c("Regression for DNMT3A mutation", 
+                                        "Regression for TET2 mutation"))
+tbl_vat <- tbl_merge(list(tbl_dnmt3a_vat, tbl_tet2_vat))
+tbl_sat <- tbl_merge(list(tbl_dnmt3a_sat, tbl_tet2_sat))
+tbl_imat <- tbl_merge(list(tbl_dnmt3a_imat, tbl_tet2_imat))
+
+gt_tbl <- tbl_stack(list(tbl_muscle, tbl_vat, tbl_sat, tbl_imat), 
+                    group_header = c("Muscle", "VAT",
+                                     "SAT", "IMAT")) %>% 
+  as_gt(#rownames_to_stub = TRUE
+  ) %>%
+  gt::tab_options(row_group.border.top.color = "black",
+                  row_group.border.top.width = 3,
+                  row_group.border.bottom.color = "darkgrey",
+                  row_group.font.size = 15,
+                  row_group.font.weight = "bold",
+                  row_group.text_transform = "uppercase",
+                  row_group.background.color = "grey")
+gt_tbl
+```
+
+### Association with body composition proportion
+Association estimates are reported per 1-SD increase in the body composition metric.   
+```{r}
+tbl_dnmt3a_muscle <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          muscle_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p() %>% 
+  modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
+tbl_dnmt3a_vat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          vat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_dnmt3a_sat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          sat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_dnmt3a_imat <- glm(mutation_gene_DNMT3A ~
+      # age_at_diagnosis_num + sex +
+          imat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+
+tbl_tet2_muscle <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          muscle_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p() %>% 
+  modify_spanning_header(everything() ~ "Regression for TET2 mutation")
+tbl_tet2_vat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          vat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_tet2_sat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          sat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+tbl_tet2_imat <- glm(mutation_gene_TET2 ~
+      # age_at_diagnosis_num + sex +
+          imat_proportionsdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE,
+                 intercept = TRUE) %>%
+  bold_p()
+
+tbl_muscle <- tbl_merge(list(tbl_dnmt3a_muscle, tbl_tet2_muscle), 
+                        tab_spanner = c("Regression for DNMT3A mutation", 
+                                        "Regression for TET2 mutation"))
+tbl_vat <- tbl_merge(list(tbl_dnmt3a_vat, tbl_tet2_vat))
+tbl_sat <- tbl_merge(list(tbl_dnmt3a_sat, tbl_tet2_sat))
+tbl_imat <- tbl_merge(list(tbl_dnmt3a_imat, tbl_tet2_imat))
+
+gt_tbl <- tbl_stack(list(tbl_muscle, tbl_vat, tbl_sat, tbl_imat), 
+                    group_header = c("Muscle", "VAT",
+                                     "SAT", "IMAT")) %>% 
+  as_gt(#rownames_to_stub = TRUE
+  ) %>%
+  gt::tab_options(row_group.border.top.color = "black",
+                  row_group.border.top.width = 3,
+                  row_group.border.bottom.color = "darkgrey",
+                  row_group.font.size = 15,
+                  row_group.font.weight = "bold",
+                  row_group.text_transform = "uppercase",
+                  row_group.background.color = "grey")
+gt_tbl
+```
+
+## Regression for association with CH variants mutations
+```{r}
+lymphoma_data %>%
+  select(starts_with("mutation_variant")) %>%
+  `colnames<-`(str_remove_all(colnames(.), "mutation_variant_")) %>% 
+  tbl_summary() %>%
+  bold_labels() %>% 
+  modify_header(label ~ "**CH mutations**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
 ```
 
 # V. Sensitivity analysis restricted to White patient (to follow when we decide which model to move forward)
@@ -358,7 +883,7 @@ restric_white_patient <- lymphoma_data %>%
 # 
 # glm(ch_status ~
 #       age_at_diagnosis_num + sex +
-#           muscle_cm2_index + vat_cm2_index + sat_cm2_index + imat_cm2_index,
+#           smi + vat_cm2_index + sat_cm2_index + imat_cm2_index,
 #     family = "binomial",
 #     data = restric_white_patient) %>%
 #   tbl_regression(exponentiate = TRUE,
@@ -378,14 +903,11 @@ restric_white_patient <- lymphoma_data %>%
 
 # VI. Survival
 ## Univariable regression analysis
-Again in the CH table, some feature distributions seems to be different.   
-imat_cm2_index, vat_cm2_index (continuous and tertiles)   
-v_s_ratio (tertiles only)     
-vat_proportion (continuous and tertiles), sat_proportion (continuous and tertiles), imat_proportion (tertiles only).    
-In the univariable analysis, only imat_cm2_index_tertcat show a trend toward a worse survival for the High IMAT tertile group.   
-As for the logistic regression, I am not sure here which factor need to be added and will read again the paper sent by Dan.
-```{r}
-tbl_1 <- tbl_uvregression(
+Association estimates are reported per 1-SD increase in the body composition metric.   
+
+## Univariable
+```{r uva cox}
+tbl_main <- tbl_uvregression(
   lymphoma_data,
   method = coxph,
   y = Surv(time = os_time_from_treatment_months, event = os_event),
@@ -394,20 +916,115 @@ tbl_1 <- tbl_uvregression(
               "sex", 
               "race", 
               "ch_status",
-              "muscle_hu", "myosteatosis",
-              "muscle_cm2_index", "imat_cm2_index", "vat_cm2_index", "sat_cm2_index",
-              "muscle_cm2_index_tertcat", "imat_cm2_index_tertcat", "vat_cm2_index_tertcat", "sat_cm2_index_tertcat",
-              "sarcopenia", "v_s_ratio", "v_s_ratio_tertcat",
-              "tat_cm2", "tat_cm2_tertcat",
-              "muscle_proportion", "imat_proportion", "vat_proportion", "sat_proportion",
-              "muscle_proportion_tertcat", "imat_proportion_tertcat", "vat_proportion_tertcat", "sat_proportion_tertcat",
-              "muscle_cm2", "imat_cm2", "vat_cm2", "sat_cm2", 
               "bmi", "bmi_cat")) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
   bold_labels() %>% italicize_levels()
-# tbl_1
-tbl_2 <-
+
+# tbl_raw <- tbl_uvregression(
+#   lymphoma_data,
+#   method = coxph,
+#   y = Surv(time = os_time_from_treatment_months, event = os_event),
+#   exponentiate = TRUE,
+#   include = c("imat_cm2", "vat_cm2", "sat_cm2",
+#               "muscle_hu", "myosteatosis",
+#               "v_s_ratio", "tat_cm2"
+#               )) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   bold_labels() %>% italicize_levels()
+
+# tbl_sdhr <- tbl_uvregression(
+#   lymphoma_data,
+#   method = coxph,
+#   y = Surv(time = os_time_from_treatment_months, event = os_event),
+#   exponentiate = TRUE,
+#   include = c("vat_cm2_sdhr", "sat_cm2_sdhr", "imat_cm2_sdhr"
+#               )) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   bold_labels() %>% italicize_levels()
+
+# tbl_index <- tbl_uvregression(
+#   lymphoma_data,
+#   method = coxph,
+#   y = Surv(time = os_time_from_treatment_months, event = os_event),
+#   exponentiate = TRUE,
+#   include = c("smi", "sarcopenia",
+#               "imat_cm2_index", "vat_cm2_index", "sat_cm2_index"
+#               )) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   bold_labels() %>% italicize_levels()
+tbl_indexsdhr <- tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = os_time_from_treatment_months, event = os_event),
+  exponentiate = TRUE,
+  include = c("smisdhr",
+              "vat_cm2_indexsdhr", "sat_cm2_indexsdhr",
+              "imat_cm2_indexsdhr"
+              )) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+
+# tbl_prop <- tbl_uvregression(
+#   lymphoma_data,
+#   method = coxph,
+#   y = Surv(time = os_time_from_treatment_months, event = os_event),
+#   exponentiate = TRUE,
+#   include = c("muscle_proportion", "imat_proportion", "vat_proportion", "sat_proportion"
+#               )) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   bold_labels() %>% italicize_levels()
+tbl_propsdhr <- tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = os_time_from_treatment_months, event = os_event),
+  exponentiate = TRUE,
+  include = c("muscle_proportionsdhr", "vat_proportionsdhr", "sat_proportionsdhr", "imat_proportionsdhr"
+              )) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+
+# tbl_cat <- tbl_uvregression(
+#   lymphoma_data,
+#   method = coxph,
+#   y = Surv(time = os_time_from_treatment_months, event = os_event),
+#   exponentiate = TRUE,
+#   include = c("smi_tertcat", "imat_cm2_index_tertcat", "vat_cm2_index_tertcat", "sat_cm2_index_tertcat",
+#               "v_s_ratio_tertcat", "tat_cm2_tertcat",
+#               "muscle_proportion_tertcat", "imat_proportion_tertcat", "vat_proportion_tertcat", "sat_proportion_tertcat")) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>%
+#   bold_labels() %>% italicize_levels()
+
+```
+
+```{r gt table uva}
+gt_tbl <- tbl_stack(list(tbl_main, tbl_indexsdhr, tbl_propsdhr), 
+                    group_header = c("Clinical", 
+                                     "1-SD normalized Indexed features",
+                                     "1-SD normalized Tissue proportion")) %>%
+  as_gt(#rownames_to_stub = TRUE
+  ) %>%
+  gt::tab_options(row_group.border.top.color = "black",
+                  row_group.border.top.width = 3,
+                  row_group.border.bottom.color = "darkgrey",
+                  row_group.font.size = 15,
+                  row_group.font.weight = "bold",
+                  row_group.text_transform = "uppercase",
+                  row_group.background.color = "grey")
+gt_tbl
+```
+
+
+## Multivariable
+```{r}
+tbl_1 <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
           sex + ch_status,
@@ -415,9 +1032,58 @@ tbl_2 <-
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level")
+tbl_muscle <-
+  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + muscle_proportionsdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level")
+tbl_sat <-
+  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + sat_proportionsdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level")
+tbl_vat <-
+  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + vat_proportionsdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level")
+tbl_imat <-
+  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + imat_proportionsdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level")
+tbl_all <-
+  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + muscle_proportionsdhr + 
+          sat_proportionsdhr +
+          vat_proportionsdhr + imat_proportionsdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level")
 
-tbl_merge(list(tbl_1, tbl_2), tab_spanner = c("**Univariable**",
-                                              "**Multivariable \nClinical only**"))
+tbl_merge(list(tbl_1, tbl_muscle, tbl_sat, tbl_vat,
+               tbl_imat, tbl_all),
+          tab_spanner = c("**Multivariable \nClinical only**",
+                          "**Multivariable SM**",
+                          "**Multivariable SAT**",
+                          "**Multivariable VAT**",
+                          "**Multivariable IMAT**",
+                          "**Multivariable 4 metric**"
+                          ))
 ```
 
 
@@ -426,7 +1092,7 @@ tbl_merge(list(tbl_1, tbl_2), tab_spanner = c("**Univariable**",
 #   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
 #              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
 #           sex + ch_status +
-#           muscle_cm2_index + vat_cm2_index + sat_cm2_index + imat_cm2_index,
+#           smi + vat_cm2_index + sat_cm2_index + imat_cm2_index,
 #         data = lymphoma_data)  %>%
 #   tbl_regression(exponentiate = TRUE) %>%
 #   bold_p(t = .05) %>%
@@ -470,7 +1136,7 @@ tbl_merge(list(tbl_1, tbl_2), tab_spanner = c("**Univariable**",
 <!-- ``` -->
 
 ## KM by CH
-```{r KM PFS 1, fig.height = 7}
+```{r KM OS by CH}
 ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
                    data = lymphoma_data),
            # title = "PFS Analysis",
@@ -481,7 +1147,7 @@ ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
            font.tickslab = c(16, "bold", "black"),
            size = 1.5,
 
-           xlab = "Time (days)",
+           xlab = "Time (months)",
            legend = "top",
            pval = TRUE,
            conf.int = FALSE,
@@ -489,6 +1155,22 @@ ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
            censor = TRUE
 ) %++% guides(colour = guide_legend(ncol = 1))
 ```
+
+# Summary
+- For the analysis, I used the body composition features in 2 ways: the height-indexed and the proportion.   
+- In papers, muscle mass is always used as an height-indexed feature while VAT, SAT and IMAT are either used raw or height-indexed.   
+I would like to find a "biologic" rational for VAT, SAT, IMAT. For example, if we think about adipose tissue as a source of inflammation for cancer, I don't think these features need to be indexed...
+- Overall, only VAT is significantly higher in the CH group.
+- I found that VAT is positively associated with CH (OR 1.57; 95% CI 1.02-2.56; p=0.054) for the height-indexed feature and (OR 1.56; 95% CI 1.02-2.45; p=0.044) for the abdominal proportion feature.   
+There is also a trend between VAT and DNMT3A mutations (OR 1.59; 95% CI 0.96-2.80; p=0.078).   
+- Results for SAT and IMAT are not consistent between height-indexed and abdominal proportion and
+Muscle mass/sarcopenia/muscle quality are never associated with CH.
+
+- Using abdominal proportion, CH is not associated with survival when adjusted by Age, Sex or additionally adjusted by each feature.
+
+
+
+
 
 
 
