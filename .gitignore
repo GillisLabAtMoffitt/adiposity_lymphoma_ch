@@ -20,6 +20,9 @@
 *.docx
 *.pptx
 
+# Output folder
+Figures/
+
 # Example code in progress
 *-Ex.R
 *-Ex.Rmd
