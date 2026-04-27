@@ -47,7 +47,8 @@ div.darkblue { background-color:#0099CC; border-radius: 5px; padding: 20px; font
 ```{r load}
 lymphoma_data <- read_rds(paste0(here::here(), 
                             "/data/processed data",
-                            "/Lymphoma_Data_20251104.rds"))
+                            "/Lymphoma_Data_20251104.rds")) %>% 
+  select(-ch_status)
 path <- fs::path("", "Volumes", "Gillis_Research",
                  "Lab_Data", "LymphomaObesity")
 sample_list <- 
@@ -193,11 +194,15 @@ ch_mutation <- ch_mutation %>%
               distinct(), .,
             by = "source_sample_id") %>%
   mutate(mrn = as.character(mrn)) %>%
+  mutate(patient_l_ch = case_when(
+    l_ch == "TRUE"                     ~ "L-CH"
+  )) %>% 
   group_by(mrn) %>%
   mutate(number_of_mutation_per_patient = case_when(
     is.na(gene)                        ~ NA_real_,
     TRUE                               ~ n()
   )) %>% 
+  fill(patient_l_ch, .direction = "updown") %>% 
   ungroup()
 
 library(fastDummies)
@@ -227,11 +232,16 @@ mutation_gene_wide <- dummy_cols(.data = ch_mutation1, select_columns = "mutatio
   ungroup()
 
 lymphoma_data <- lymphoma_data %>%
+  inner_join(., ch_mutation %>% 
+               select(mrn, ch_status, patient_l_ch) %>% 
+               distinct(), 
+             by = "mrn") %>%
   full_join(., mutation_variant_wide, by = "mrn") %>%
   full_join(., mutation_gene_wide, by = "mrn") %>%
   mutate(across(c(starts_with("mutation_variant") | 
                     starts_with("mutation_gene")
-                  ), .fns = ~ replace_na(., 0)))
+                  ), .fns = ~ replace_na(., 0))) %>% 
+  mutate(ch_status = factor(ch_status, levels = c("No CH", "CH")))
 ```
 
 ```{r Labeling data}
@@ -240,8 +250,8 @@ var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
                                  race_cr_src_desc_1	 = "Race (raw)",
                                  race = "Race", ethnicity_src_desc = "Ethnicity",
                                  histology_desc = "Histology",
-                                 bmi = "BMI (continuous)",
-                                 bmi_cat = "BMI (categorical)",
+                                 bmi = "BMI (kg/m², continuous)",
+                                 bmi_cat = "BMI (kg/m², categorical)",
                                  bsa_du_bois = "BSA (Dubois formula)",
                                  bsa_cat = "BSA (categorical)",
                                  weight_kg = "Weight (kg)",
@@ -1675,24 +1685,29 @@ restric_white_patient <- lymphoma_data %>%
 
 # VI. Survival
 ## Univariable regression analysis
-Association estimates are reported per 1-SD increase in the body composition metric.   
+Association estimates are reported per 1-SD increase in the body composition metric.
 
 ## Univariable
-```{r uva cox}
+```{r HR uva cox clinical}
 tbl_main_surv <- tbl_uvregression(
   lymphoma_data,
   method = coxph,
   y = Surv(time = os_time_from_treatment_months, event = os_event),
   exponentiate = TRUE,
   include = c("age_at_diagnosis_num",
-              "sex", 
-              "race", 
+              "sex",
+              "race",
               "ch_status",
               "bmi", "bmi_cat")) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
   bold_labels() %>% italicize_levels()
+# tbl_main_surv
+```
 
+
+
+```{r HR uva cox BC}
 # tbl_raw <- tbl_uvregression(
 #   lymphoma_data,
 #   method = coxph,
@@ -1797,6 +1812,57 @@ gt_tbl
 
 
 ## Multivariable
+## MVA BMI
+```{r HR mva bmi}
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + bmi,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_table_styling(
+    columns = estimate,
+    rows = reference_row %in% TRUE,
+    missing_symbol = "Reference"
+  ) %>%
+  modify_column_merge(
+    pattern = "{stat_n} ({stat_nevent})",
+    rows = !is.na(stat_nevent)
+  ) %>%
+  modify_header(stat_n = "**N (Event N)**") %>% 
+  # merge all info
+  modify_column_merge(
+    pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
+    rows = !is.na(estimate)
+  ) %>%
+  remove_abbreviation()
+
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+          sex + ch_status + bmi_cat,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_table_styling(
+    columns = estimate,
+    rows = reference_row %in% TRUE,
+    missing_symbol = "Reference"
+  ) %>%
+  modify_column_merge(
+    pattern = "{stat_n} ({stat_nevent})",
+    rows = !is.na(stat_nevent)
+  ) %>%
+  modify_header(stat_n = "**N (Event N)**") %>% 
+  # merge all info
+  modify_column_merge(
+    pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
+    rows = !is.na(estimate)
+  ) %>%
+  remove_abbreviation()
+```
+
 ```{r}
 tbl_1_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
@@ -2290,22 +2356,16 @@ ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
 ) %++% guides(colour = guide_legend(ncol = 1))
 ```
 
-# Summary
-- For the analysis, I used the body composition features in 2 ways: the height-indexed and the proportion.   
-- In papers, muscle mass is always used as an height-indexed feature while VAT, SAT and IMAT are either used raw or height-indexed.   
-I would like to find a "biologic" rational for VAT, SAT, IMAT. For example, if we think about adipose tissue as a source of inflammation for cancer, I don't think these features need to be indexed...
-- Overall, only VAT is significantly higher in the CH group.
-- I found that VAT is positively associated with CH (OR 1.57; 95% CI 1.02-2.56; p=0.054) for the height-indexed feature and (OR 1.56; 95% CI 1.02-2.45; p=0.044) for the abdominal proportion feature.   
-There is also a trend between VAT and DNMT3A mutations (OR 1.59; 95% CI 0.96-2.80; p=0.078).   
-- Results for SAT and IMAT are not consistent between height-indexed and abdominal proportion and
-Muscle mass/sarcopenia/muscle quality are never associated with CH.
-
-- Using abdominal proportion, CH is not associated with survival when adjusted by Age, Sex or additionally adjusted by each feature.
-
-
 
 <br>
 
+# L-CH
+```{r}
+lymphoma_data %>% 
+  filter(patient_l_ch == "L-CH") %>% 
+  inner_join(., ch_mutation) %>% 
+  select(mrn, gene, variant_p, os_event, os_time_from_treatment_months, sex, race, ethnicity_src_desc, myosteatosis, sarcopenia, bmi)
+```
 
 
 
