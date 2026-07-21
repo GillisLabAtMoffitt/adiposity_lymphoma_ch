@@ -17,6 +17,11 @@ clinical <-
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
 
+stage_reviewed <- 
+  read_csv(paste0(# path,
+    here::here(), "/data/raw data",
+    "/LymphomaObesity_PatientStageReviewed_20260629.csv"))
+
 vitals <- 
   readxl::read_xlsx(paste0(
     # path, "/RawData",
@@ -47,6 +52,11 @@ weight <-
   ) %>% 
   janitor::clean_names() %>% 
   mutate(mrn = as.character(mrn))
+
+height_reviewed <- 
+  read_csv(paste0(# path,
+    here::here(), "/data/raw data",
+    "/LymphomaObesity_PatientHeightReviewed_20260629.csv"))
 
 body_comp <- 
   readxl::read_xlsx(paste0(# path,
@@ -140,7 +150,11 @@ height <- weight %>%
   distinct(mrn, .keep_all = TRUE) %>% 
   select(-scan_date) %>% 
   mutate_at(c("time_height_to_scan_days",
-              "time_height_after_scan_days"), ~ round(., 0))
+              "time_height_after_scan_days"), ~ round(., 0)) %>% 
+  bind_rows(., height_reviewed %>% 
+              mutate(mrn = as.character(mrn)) %>% 
+              mutate(height_unit = "cm") %>% 
+              rename(height = height_cm))
 
 weight <- weight %>% 
   filter(!is.na(vitals_value_weight)) %>% 
@@ -194,8 +208,14 @@ lymphoma_data <- lymphoma_data %>%
   ), .before = race_cr_src_desc_1) %>% 
   # For BMI and BSA
   mutate(weight_kg = weight / 2.205,
-         height_m = height / 39.37,
-         height_cm = height * 2.54,
+         height_m = case_when(
+           height_unit == "cm"       ~ height / 100,
+           TRUE                      ~ height / 39.37
+         ),
+         height_cm = case_when(
+           height_unit == "cm"       ~ height,
+           TRUE                      ~ height * 2.54
+         ),
          bmi = weight_kg / (height_m * height_m)) %>%
   mutate(bmi_cat = case_when(
     bmi < 25                    ~ "<25",
@@ -221,24 +241,29 @@ lymphoma_data <- lymphoma_data %>%
   mutate(os_event = case_when(
     vital_status == "ALIVE"     ~ 0,
     vital_status == "DEAD"      ~ 1
-  ))
+  )) %>% 
+  # stage
+  left_join(., stage_reviewed %>% 
+              mutate(mrn = as.character(mrn)), 
+            by = "mrn") %>% 
+  mutate(stage_tnm_cs_mixed_group_desc = coalesce(stage_reviewed, stage_tnm_cs_mixed_group_desc))
   
   
 # Save
 write_csv(lymphoma_data,
           paste0(here::here(), 
                  "/data/processed data",
-                 "/Lymphoma_Data_",
+                 "/LymphomaObesity_Data_",
                  str_remove_all(today(), "-"), ".csv"))
 write_rds(lymphoma_data, 
           paste0(here::here(), 
                  "/data/processed data",
-                 "/Lymphoma_Data_",
+                 "/LymphomaObesity_Data_",
                  str_remove_all(today(), "-"), ".rds"))
 
 write_csv(lymphoma_data, 
           paste0(path, "/ProcessedData",
-                 "/Lymphoma_Data_",
+                 "/LymphomaObesity_Data_",
                  str_remove_all(today(), "-"), ".csv"))
 
 

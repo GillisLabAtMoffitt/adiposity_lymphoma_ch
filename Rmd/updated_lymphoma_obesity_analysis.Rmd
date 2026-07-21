@@ -219,27 +219,55 @@ lymphoma_data <- lymphoma_data %>%
   mutate(across(c(ends_with("_tertcat")), 
                 ~ factor(., levels = 
                            c("Low", "Medium", "High"))))
+```
+
+
+```{r}
+# lymphoma_data <- lymphoma_data %>% 
+#   # Make 1-standard deviation increase of the height indexed feature
+#   mutate(across(c("muscle_hu", "muscle_cm2",
+#                   "vat_cm2", "sat_cm2", "imat_cm2",
+#                   "tat_cm2"#,
+#                   # contains("_proportion")
+#                   ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
 
 lymphoma_data <- lymphoma_data %>% 
-  # Make 1-standard deviation increase of the feature
-  mutate(across(c("muscle_hu", "muscle_cm2",
-                  "vat_cm2", "sat_cm2", "imat_cm2",
-                  "tat_cm2"#,
-                  # contains("_proportion")
-                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
-
-lymphoma_data <- lymphoma_data %>% 
-  # Make 1-standard deviation increase of the height indexed feature
-  mutate(across(c("smi",
+  # Make 1-standard deviation z score
+  # mutate(across(c("smi",
+  #                 "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+  #                 "tat_cm2_index"#,
+  #                 # contains("_proportion")
+  #                 ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+  group_by(sex) %>% 
+  mutate(across(c("muscle_hu", "smi",
                   "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
-                  "tat_cm2_index"#,
-                  # contains("_proportion")
-                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+                  "tat_cm2_index",
+                  ends_with("_proportion")
+                  ), ~ mean(., na.rm = TRUE) , .names = "{.col}_mean")) %>% 
+  mutate(across(c("muscle_hu", "smi",
+                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+                  "tat_cm2_index",
+                  ends_with("_proportion")
+                  ), ~ sd(., na.rm = TRUE) , .names = "{.col}_sd")) %>% 
+  ungroup() %>% 
+  mutate(muscle_hu_sdhr = (muscle_hu * muscle_hu_mean) / muscle_hu_sd) %>% 
+  mutate(smi_sdhr = (smi * smi_mean) / smi_sd) %>% 
+  mutate(vat_cm2_index_sdhr = (vat_cm2_index * vat_cm2_index_mean) / vat_cm2_index_sd) %>% 
+  mutate(sat_cm2_index_sdhr = (sat_cm2_index * sat_cm2_index_mean) / sat_cm2_index_sd) %>% 
+  mutate(imat_cm2_index_sdhr = (imat_cm2_index * imat_cm2_index_mean) / imat_cm2_index_sd) %>% 
+  mutate(tat_cm2_index_sdhr = (tat_cm2_index * tat_cm2_index_mean) / tat_cm2_index_sd) %>% 
+  mutate(muscle_proportion_sdhr = (muscle_proportion * muscle_proportion_mean) / muscle_proportion_sd) %>% 
+  mutate(vat_proportion_sdhr = (vat_proportion * vat_proportion_mean) / vat_proportion_sd) %>% 
+  mutate(sat_proportion_sdhr = (sat_proportion * sat_proportion_mean) / sat_proportion_sd) %>% 
+  mutate(imat_proportion_sdhr = (imat_proportion * imat_proportion_mean) / imat_proportion_sd) #%>% 
+  
+  # select(mrn, sex, contains("imat"), -contains("tertcat"))
+  
 
-lymphoma_data <- lymphoma_data %>% 
-  # Make 1-standard deviation increase of the height indexed feature
-  mutate(across(c(contains("_proportion") & where(is.numeric)
-                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+# lymphoma_data <- lymphoma_data %>% 
+#   # Make 1-standard deviation increase of the height indexed feature
+#   mutate(across(c(contains("_proportion") & where(is.numeric)
+#                   ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
 ```
 
 ```{r}
@@ -320,24 +348,24 @@ var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
                                  tat_cm2 = "TAT",
                                  smi = "SMI",
                                  sarcopenia = "Sarcopenia",
-                                 vat_cm2_index = "VAT (index)",
-                                 sat_cm2_index = "SAT (index)",
-                                 imat_cm2_index = "IMAT (index)",
-                                 tat_cm2_index = "TAT (index)",
+                                 vat_cm2_index = "VATI",
+                                 sat_cm2_index = "SATI",
+                                 imat_cm2_index = "IMATI",
+                                 tat_cm2_index = "TATI",
                                  muscle_proportion = "Muscle proportion",
                                  vat_proportion = "VAT proportion",
                                  sat_proportion = "SAT proportion",
                                  imat_proportion = "IMAT proportion",
                                  
-                                 smisdhr = "SMI",
-                                 vat_cm2_indexsdhr = "VAT (index)",
-                                 sat_cm2_indexsdhr = "SAT (index)",
-                                 imat_cm2_indexsdhr = "IMAT (index)",
-                                 tat_cm2_indexsdhr = "TAT (index)",
-                                 muscle_proportionsdhr = "Muscle proportion",
-                                 vat_proportionsdhr = "VAT proportion",
-                                 sat_proportionsdhr = "SAT proportion",
-                                 imat_proportionsdhr = "IMAT proportion",
+                                 smi_sdhr = "SMI",
+                                 vat_cm2_index_sdhr = "VATI",
+                                 sat_cm2_index_sdhr = "SATI",
+                                 imat_cm2_index_sdhr = "IMATI",
+                                 tat_cm2_index_sdhr = "TATI",
+                                 muscle_proportion_sdhr = "Muscle proportion",
+                                 vat_proportion_sdhr = "VAT proportion",
+                                 sat_proportion_sdhr = "SAT proportion",
+                                 imat_proportion_sdhr = "IMAT proportion",
                                  
                                  os_event = "Deaths",
                                  # os_time_from_treatment_months = "Follow-up time from treatment (months)",
@@ -345,7 +373,7 @@ var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
 )
 ```
 
-# I. Patient characteristic by CH status
+# I. Patient characteristic by CH status - Table 1
 ```{r Patient characteristics}
 lymphoma_data %>%
   select(ch_status) %>%
@@ -369,6 +397,7 @@ lymphoma_data %>%
          regimen_cat,
          `survival time (months, Registry)` = survival_time_in_months,
          os_time_from_treatment_months, os_event,
+         pfs_event,
          bmi, bmi_cat, #bsa_du_bois, bsa_cat,
          weight_kg, height_m,
          ch_status
@@ -384,62 +413,62 @@ lymphoma_data %>%
                 all_stat_cols() ~ "**{level}**, N = {n}")
 ```
 
-# II. BMI, Survival and Body composition
-It was described that BMI is not the best predictor for survival. While we would expect patients present in the highest BMI group (≥30) to have the worse survival, they often show a better survival than patient within the middle BMI group (≥25 - <30).
-```{r KM OS BMI}
-ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ bmi_cat,
-                   data = lymphoma_data),
-           # title = "PFS Analysis",
-           font.main = c(20, "bold", "black"),
-           font.x = c(18, "bold", "black"),
-           font.y = c(18, "bold", "black"),
-           font.legend = c(16, "black"),
-           font.tickslab = c(16, "bold", "black"),
-           size = 1.5,
-           palette = c("#000004FF", "#8C2981FF", "#FE9F6DFF"), #"aaas",
-           xlab = "Time (months)",
-           legend = "top",
-           pval = TRUE,
-           conf.int = FALSE,
-           # Censor
-           censor = TRUE
-) %++% guides(colour = guide_legend(ncol = 1))
+<!-- # II. BMI, Survival and Body composition -->
+<!-- It was described that BMI is not the best predictor for survival. While we would expect patients present in the highest BMI group (≥30) to have the worse survival, they often show a better survival than patient within the middle BMI group (≥25 - <30). -->
+<!-- ```{r KM OS BMI} -->
+<!-- ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ bmi_cat, -->
+<!--                    data = lymphoma_data), -->
+<!--            # title = "PFS Analysis", -->
+<!--            font.main = c(20, "bold", "black"), -->
+<!--            font.x = c(18, "bold", "black"), -->
+<!--            font.y = c(18, "bold", "black"), -->
+<!--            font.legend = c(16, "black"), -->
+<!--            font.tickslab = c(16, "bold", "black"), -->
+<!--            size = 1.5, -->
+<!--            palette = c("#000004FF", "#8C2981FF", "#FE9F6DFF"), #"aaas", -->
+<!--            xlab = "Time (months)", -->
+<!--            legend = "top", -->
+<!--            pval = TRUE, -->
+<!--            conf.int = FALSE, -->
+<!--            # Censor -->
+<!--            censor = TRUE -->
+<!-- ) %++% guides(colour = guide_legend(ncol = 1)) -->
 
-coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ bmi_cat,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level") %>% 
-  modify_header(label ~ "**Survival association with BMI**")
-```
+<!-- coxph(Surv(time = lymphoma_data$os_time_from_treatment_months, -->
+<!--              event = lymphoma_data$os_event) ~ bmi_cat, -->
+<!--         data = lymphoma_data)  %>% -->
+<!--   tbl_regression(exponentiate = TRUE) %>% -->
+<!--   bold_p(t = .05) %>% -->
+<!--   add_nevent(location = "level") %>% add_n(location = "level") %>%  -->
+<!--   modify_header(label ~ "**Survival association with BMI**") -->
+<!-- ``` -->
 
-Also, BMI is not the best representation of the actual body composition.   
-For example, in our cohort, the highest median value for muscle HU (radiodensity) belong to the patients in the middle BMI category (≥25 - <30).
-SAT values are similar between these patients and patients in the high BMI category (≥30).
-```{r Body composition plot, fig.height=5}
-lymphoma_data %>% 
-  select(mrn,
-         muscle_cm2, imat_cm2, vat_cm2, sat_cm2, 
-         muscle_hu,
-         bmi_cat
-         ) %>%
-  filter(!is.na(bmi_cat)) %>% 
-  pivot_longer(-c(mrn, bmi_cat)) %>% 
-  mutate(name = factor(name, levels = c("muscle_hu", "muscle_cm2", 
-                                        "vat_cm2", "sat_cm2", "imat_cm2"))) %>% 
-  ggplot(aes(x= bmi_cat, y= value, color = bmi_cat))+
-  geom_boxplot()+
-  labs(x = "BMI (categories)", y = "Body composition values")+
-  scale_color_viridis_d(option = "A", end = c(0.8))+
-  theme_classic()+
-  coord_flip()+
-  # facet_grid(cols = vars(name), scales = "free")
-  facet_wrap(.~ name, scales = "free", ncol = 2)+
-  theme(legend.position = "none")
-```
+<!-- Also, BMI is not the best representation of the actual body composition.    -->
+<!-- For example, in our cohort, the highest median value for muscle HU (radiodensity) belong to the patients in the middle BMI category (≥25 - <30). -->
+<!-- SAT values are similar between these patients and patients in the high BMI category (≥30). -->
+<!-- ```{r Body composition plot, fig.height=5} -->
+<!-- lymphoma_data %>%  -->
+<!--   select(mrn, -->
+<!--          muscle_cm2, imat_cm2, vat_cm2, sat_cm2,  -->
+<!--          muscle_hu, -->
+<!--          bmi_cat -->
+<!--          ) %>% -->
+<!--   filter(!is.na(bmi_cat)) %>%  -->
+<!--   pivot_longer(-c(mrn, bmi_cat)) %>%  -->
+<!--   mutate(name = factor(name, levels = c("muscle_hu", "muscle_cm2",  -->
+<!--                                         "vat_cm2", "sat_cm2", "imat_cm2"))) %>%  -->
+<!--   ggplot(aes(x= bmi_cat, y= value, color = bmi_cat))+ -->
+<!--   geom_boxplot()+ -->
+<!--   labs(x = "BMI (categories)", y = "Body composition values")+ -->
+<!--   scale_color_viridis_d(option = "A", end = c(0.8))+ -->
+<!--   theme_classic()+ -->
+<!--   coord_flip()+ -->
+<!--   # facet_grid(cols = vars(name), scales = "free") -->
+<!--   facet_wrap(.~ name, scales = "free", ncol = 2)+ -->
+<!--   theme(legend.position = "none") -->
+<!-- ``` -->
 
-# III. Body composition features by CH status
+# III. Body composition features by CH status - Table 1
 
 Most patients (82) have thickness of 3.75 which is often used for Pet/CT so this looks normal. A couple of patient have smaller thickness and 12 have higher thickness value.   
 
@@ -475,8 +504,8 @@ lymphoma_data %>%
 ```{r Body composition table}
 tbl_raw <- lymphoma_data %>%
   select(#muscle_cm2, imat_cm2, vat_cm2, sat_cm2, 
-         muscle_hu, myosteatosis,
-         v_s_ratio, visceral_obesity, tat_cm2,
+         muscle_hu, myosteatosis, sarcopenia,
+         v_s_ratio, visceral_obesity, #tat_cm2,
          # ends_with("_tertcat"),
          # imat_hu, vat_hu, sat_hu,
          # muscle_sd, imat_sd, vat_sd,
@@ -505,12 +534,12 @@ tbl_raw <- lymphoma_data %>%
 #                 all_stat_cols() ~ "**{level}**, N = {n}")
 
 tbl_index <- lymphoma_data %>%
-  select(smi, sarcopenia,
+  select(smi, 
          vat_cm2_index, sat_cm2_index, imat_cm2_index, tat_cm2_index, 
          ch_status
          ) %>%
   tbl_summary(by = ch_status,
-              statistic = list(all_continuous() ~ "{median} [{sd}] ({p25}, {p75})", 
+              statistic = list(all_continuous() ~ "{median} ({p25}, {p75})", 
                                all_categorical() ~"{n} ({p}%)"),
               digits = list(all_continuous() ~ 1)) %>%
   bold_labels() %>%
@@ -518,8 +547,8 @@ tbl_index <- lymphoma_data %>%
   modify_header(label ~ "**Body composition**",
                 all_stat_cols() ~ "**{level}**, N = {n}")
 
-# tbl_indexsdhr <- lymphoma_data %>%
-#   select(ends_with("_indexsdhr"), 
+# tbl_index_sdhr <- lymphoma_data %>%
+#   select(ends_with("_index_sdhr"), 
 #          ch_status
 #          ) %>%
 #   tbl_summary(by = ch_status,
@@ -535,7 +564,7 @@ tbl_prop <- lymphoma_data %>%
          ch_status
          ) %>%
   tbl_summary(by = ch_status,
-              statistic = list(all_continuous() ~ "{median} [{sd}] ({min}, {max})", 
+              statistic = list(all_continuous() ~ "{median} ({p25}, {p75})", 
                                all_categorical() ~"{n} ({p}%)")) %>%
   bold_labels() %>%
   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
@@ -574,13 +603,13 @@ gt_tbl <- tbl_stack(list(tbl_index, tbl_prop, tbl_raw),
 gt_tbl
 ```
 
-I plotted the original features by CH status. Will update once we figure out the best features to show.
+I plotted the original features by CH status. Will update once we figure out the best features to show. Figure 3
 ```{r Body composition plot by CH, fig.height=4}
-facet_names <- as_labeller(c(
-  "SMI" = "SMI",
-  "VATi" = "VAT[i]", "SATi" = "SAT[i]", "IMATi" = "IMAT[i]"), 
-  default = label_parsed
-)
+# facet_names <- as_labeller(c(
+#   "SMI" = "SMI",
+#   "VATI" = "VAT[i]", "SATI" = "SAT[i]", "IMATI" = "IMAT[i]"), 
+#   default = label_parsed
+# )
 boxplot_index <- lymphoma_data %>% 
   select(mrn,
          smi, imat_cm2_index, vat_cm2_index, sat_cm2_index, 
@@ -591,13 +620,13 @@ boxplot_index <- lymphoma_data %>%
   pivot_longer(-c(mrn, bmi_cat, ch_status)) %>% 
   mutate(name = case_when(
     name == "smi"                         ~ "SMI",
-    name == "vat_cm2_index"               ~ "VATi",
-    name == "sat_cm2_index"               ~ "SATi",
-    name == "imat_cm2_index"              ~ "IMATi"
+    name == "vat_cm2_index"               ~ "VATI",
+    name == "sat_cm2_index"               ~ "SATI",
+    name == "imat_cm2_index"              ~ "IMATI"
   )) %>%
   mutate(name = factor(name,
-                       levels = c("SMI", "VATi", "SATi", "IMATi")#,
-                       # labels = c("'Group A'*^1", "'Group B'*^2", "SATi", "IMATi")
+                       levels = c("SMI", "VATI", "SATI", "IMATI")#,
+                       # labels = c("'Group A'*^1", "'Group B'*^2", "SATI", "IMATI")
                        )) %>%
   ggplot(aes(x= ch_status, y= value, color = ch_status))+
   geom_boxplot()+
@@ -606,7 +635,7 @@ boxplot_index <- lymphoma_data %>%
   theme_classic()+
   coord_flip()+
   # facet_grid(cols = vars(name), scales = "free")
-  facet_wrap(.~ name, scales = "free", nrow = 1, labeller = facet_names)+
+  facet_wrap(.~ name, scales = "free", nrow = 1)+
   theme(legend.position = "none")
 
 boxplot_prop <- lymphoma_data %>% 
@@ -649,7 +678,7 @@ boxplot_index /
 
 
 
-# ggsave("Figures/Figure S2 Distribution of body composition features by CH status_20260630.jpeg",
+# ggsave("Figures/Figure S2 Distribution of body composition features by CH status_20260720.jpeg",
 #        dpi = 600, units = "in",
 #        width = 10,
 #        height = 4
@@ -658,22 +687,10 @@ boxplot_index /
 
 
 # IV. CH and Body composition - glm logistic regression
-In the CH table, some feature distributions seems to be different.   
-IMAT, VAT for indexed features, and VAT, SAT for abdominal proportion (trend pvalue > 0.05 & < 0.1, only VAT abdominal pvalue < 0.05).
 
 ## 1. Regression for association with CH status
-### Clinical
-```{r CH clinical regression}
-glm(ch_status ~
-      age_at_diagnosis_num + sex + stage,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
-```
 
-### a. BMI
+### a. BMI - Table S3
 https://ashpublications.org/blood/article/144/Supplement%201/872/531065/Mutation-Specific-Differences-in-the-Relationship
 In UKBB analyses, we identified genotype-specific patterns of association between BMI and the presence of CH mutations. JAK2 (OR 0.51; 95% CI 0.27-0.96; p=0.036) and DNMT3A mutations (OR 0.92; 95% CI 0.87-0.97; p=0.0028) were negatively associated with a BMI >30 relative to BMI <25, whereas mutations in ASXL1(OR 1.40; 95% CI 1.23-1.60; p=8.8x10-7) and TET2 (OR 1.16; 95% CI 1.04-1.31; p=0.0095) were positively associated with BMI >30.
 
@@ -682,243 +699,224 @@ glm(ch_status ~
       age_at_diagnosis_num + sex + stage + bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
       age_at_diagnosis_num + sex + stage + bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 
-### b. Association with height-indexed body composition features
-Association estimates are reported per 1-SD increase in the body composition metric.   
-VAT and IMAT show a trend toward a positive association with the presence of CH mutations.   
-Additional adjustment for Age and Sex show similar results.
-#### UVA
+BMI overweight and obese combined together
 ```{r}
-# glm(ch_status ~
-#       # age_at_diagnosis_num + sex + stage +
-#           smi + vat_cm2_index + sat_cm2_index + imat_cm2_index,
-#     family = "binomial",
-#     data = lymphoma_data) %>%
-#   tbl_regression(exponentiate = TRUE,
-#                  intercept = TRUE) %>%
-#   modify_spanning_header(everything() ~ "Regression for CH status")
-tbl_ch_muscle_ind_uva <- 
-  glm(ch_status ~
-          smisdhr,
+lymphoma_data <- lymphoma_data %>% 
+  mutate(bmi_cat_grouped = case_when(
+    bmi_cat == "<25"                ~ "<25",
+    !is.na(bmi_cat)                 ~ "≥25"
+  ), bmi_cat_grouped = factor(bmi_cat_grouped, levels = c("<25", "≥25")))
+
+glm(ch_status ~
+      age_at_diagnosis_num + sex + stage + bmi_cat_grouped,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      bmi_cat_grouped,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+```
+
+
+### b. Association with height-indexed body composition features
+#### UVA - Table S4
+```{r}
+tbl_ch_muscle_ind_uva <- 
+  glm(ch_status ~
+          smi_sdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_muscle_ind_uva
 tbl_ch_vat_ind_uva <- 
   glm(ch_status ~
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_vat_ind_uva
 tbl_ch_sat_ind_uva <- 
   glm(ch_status ~
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_sat_ind_uva
 tbl_ch_imat_ind_uva <- 
   glm(ch_status ~
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_imat_ind_uva
-# glm(ch_status ~
-#           v_s_ratio_tertcat,
-#     family = "binomial",
-#     data = lymphoma_data) %>%
-#   tbl_regression(exponentiate = TRUE,
-#                  intercept = TRUE) %>%
-#   modify_spanning_header(everything() ~ "Regression for CH status")
-
-# glm(ch_status ~
-#           tat_cm2,
-#     family = "binomial",
-#     data = lymphoma_data) %>%
-#   tbl_regression(exponentiate = TRUE,
-#                  intercept = TRUE) %>%
-#   modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 
-#### MVA
+#### MVA - Table 2
 ```{r}
 tbl_ch_muscle_ind_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_muscle_ind_mva
 tbl_ch_vat_ind_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_vat_ind_mva
 tbl_ch_sat_ind_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_sat_ind_mva
 tbl_ch_imat_ind_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_imat_ind_mva
 ```
 
 
 ### c. Association with body composition proportion
-Association estimates are reported per 1-SD increase in the body composition metric.   
-Additional adjustment for Age and Sex exhibit similar results.
-#### UVA
+#### UVA - Table S4
 ```{r}
-# glm(ch_status ~
-#       # age_at_diagnosis_num + sex + stage +
-#           muscle_proportion + vat_proportion + sat_proportion + imat_proportion,
-#     family = "binomial",
-#     data = lymphoma_data) %>%
-#   tbl_regression(exponentiate = TRUE,
-#                  intercept = TRUE) %>%
-#   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_muscle_prop_uva <- 
   glm(ch_status ~
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_muscle_prop_uva
 tbl_ch_vat_prop_uva <- 
   glm(ch_status ~
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_vat_prop_uva
 tbl_ch_sat_prop_uva <- 
   glm(ch_status ~
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_sat_prop_uva
 tbl_ch_imat_prop_uva <- 
   glm(ch_status ~
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_imat_prop_uva
-# glm(ch_status ~
-#       age_at_diagnosis_num + sex + stage +
-#           muscle_proportion_tertcat + vat_proportion_tertcat + sat_proportion_tertcat + imat_proportion_tertcat,
-#     family = "binomial",
-#     data = lymphoma_data) %>%
-#   tbl_regression(exponentiate = TRUE,
-#                  intercept = TRUE) %>%
-#   modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 
-#### MVA
+#### MVA - Table S5
 ```{r}
 tbl_ch_muscle_prop_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_muscle_prop_mva
 tbl_ch_vat_prop_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_vat_prop_mva
 tbl_ch_sat_prop_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_sat_prop_mva
 tbl_ch_imat_prop_mva <- 
   glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 tbl_ch_imat_prop_mva
 ```
@@ -930,31 +928,54 @@ glm(ch_status ~
           muscle_hu_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
           myosteatosis,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
 glm(ch_status ~
       age_at_diagnosis_num + sex + stage +
           sarcopenia,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
-
+glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          tat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          v_s_ratio,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
+glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          visceral_obesity,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 <br>
 
 ## 2. Regression for association with CH gene mutations
-### a. Count table and VAF
+### a. Count table and VAF - Removed from Tables
 ```{r}
 lymphoma_data %>%
   select(number_of_mutation_per_patient, starts_with("mutation_gene")) %>%
@@ -971,203 +992,201 @@ ch_mutation %>%
 ```
 
 ### b. BMI
-#### UVA
+#### UVA - Table S3
 ```{r}
 glm(mutation_gene_DNMT3A ~
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 glm(mutation_gene_DNMT3A ~
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 glm(mutation_gene_PPM1D ~
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 glm(mutation_gene_PPM1D ~
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 glm(mutation_gene_TET2 ~
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 glm(mutation_gene_TET2 ~
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 ```
 
-#### MVA
+#### MVA - Table S3
 ```{r}
 glm(mutation_gene_DNMT3A ~ age_at_diagnosis_num + sex + stage +
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 glm(mutation_gene_DNMT3A ~ age_at_diagnosis_num + sex + stage +
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 glm(mutation_gene_PPM1D ~ age_at_diagnosis_num + sex + stage +
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 glm(mutation_gene_PPM1D ~ age_at_diagnosis_num + sex + stage +
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 glm(mutation_gene_TET2 ~ age_at_diagnosis_num + sex + stage +
       bmi,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 glm(mutation_gene_TET2 ~ age_at_diagnosis_num + sex + stage +
       bmi_cat,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 ```
 
 ### c. Association with height-indexed body composition features
-Association estimates are reported per 1-SD increase in the body composition metric.   
-Mutations in DNMT3A (OR 1.59) seem to be positively associated with higher VAT.
-#### UVA
+#### UVA - Table S4
 ```{r}
 tbl_dnmt3a_muscle_ind_uva <- glm(mutation_gene_DNMT3A ~
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 tbl_dnmt3a_vat_ind_uva <- glm(mutation_gene_DNMT3A ~
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_sat_ind_uva <- glm(mutation_gene_DNMT3A ~
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_imat_ind_uva <- glm(mutation_gene_DNMT3A ~
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_ppm1d_muscle_ind_uva <- glm(mutation_gene_PPM1D ~
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 tbl_ppm1d_vat_ind_uva <- glm(mutation_gene_PPM1D ~
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_sat_ind_uva <- glm(mutation_gene_PPM1D ~
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_imat_ind_uva <- glm(mutation_gene_PPM1D ~
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_tet2_muscle_ind_uva <- glm(mutation_gene_TET2 ~
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 tbl_tet2_vat_ind_uva <- glm(mutation_gene_TET2 ~
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_sat_ind_uva <- glm(mutation_gene_TET2 ~
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_imat_ind_uva <- glm(mutation_gene_TET2 ~
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
-tbl_muscle_ind_uva <- tbl_merge(list(tbl_dnmt3a_muscle_ind_uva, tbl_ppm1d_muscle_ind_uva, tbl_tet2_muscle_ind_uva), 
-                        tab_spanner = c("Regression for DNMT3A mutation", 
-                                        "Regression for PPM1D mutation", 
+tbl_muscle_ind_uva <- tbl_merge(list(tbl_dnmt3a_muscle_ind_uva, tbl_ppm1d_muscle_ind_uva, tbl_tet2_muscle_ind_uva),
+                        tab_spanner = c("Regression for DNMT3A mutation",
+                                        "Regression for PPM1D mutation",
                                         "Regression for TET2 mutation"))
 tbl_vat_ind_uva <- tbl_merge(list(tbl_dnmt3a_vat_ind_uva, tbl_ppm1d_vat_ind_uva, tbl_tet2_vat_ind_uva))
 tbl_sat_ind_uva <- tbl_merge(list(tbl_dnmt3a_sat_ind_uva, tbl_ppm1d_sat_ind_uva, tbl_tet2_sat_ind_uva))
 tbl_imat_ind_uva <- tbl_merge(list(tbl_dnmt3a_imat_ind_uva, tbl_ppm1d_imat_ind_uva, tbl_tet2_imat_ind_uva))
 
-gt_tbl <- tbl_stack(list(tbl_muscle_ind_uva, tbl_vat_ind_uva, tbl_sat_ind_uva, tbl_imat_ind_uva), 
+gt_tbl <- tbl_stack(list(tbl_muscle_ind_uva, tbl_vat_ind_uva, tbl_sat_ind_uva, tbl_imat_ind_uva),
                     group_header = c("Muscle", "VAT",
-                                     "SAT", "IMAT")) %>% 
+                                     "SAT", "IMAT")) %>%
   as_gt(#rownames_to_stub = TRUE
   ) %>%
   gt::tab_options(row_group.border.top.color = "black",
@@ -1180,236 +1199,107 @@ gt_tbl <- tbl_stack(list(tbl_muscle_ind_uva, tbl_vat_ind_uva, tbl_sat_ind_uva, t
 gt_tbl
 ```
 
-
-```{r forest plot uva OR index}
-# forest_uva_ind <- 
-#   tbl_dnmt3a_muscle_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SMI")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "DNMT3A") %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_vat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT (index)")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_sat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT (index)")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_imat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT (index)")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_muscle_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SMI")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_vat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT (index)")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_sat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT (index)")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_imat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT (index)")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_tet2_muscle_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SMI")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_vat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT (index)")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_sat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT (index)")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_imat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT (index)")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "TET2")) %>% 
-# 
-#   bind_rows(., tbl_ch_muscle_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SMI")) %>%
-#   mutate(model = "SM") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_vat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT (index)")) %>%
-#   mutate(model = "VAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_sat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT (index)")) %>%
-#   mutate(model = "SAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_imat_ind_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT (index)")) %>%
-#   mutate(model = "IMAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-#   mutate_at(c("OR", "lower", "upper"), ~ as.numeric(.)) %>% 
-#   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-#   mutate(Characteristic = factor(Characteristic, levels = c("IMAT", "VAT", 
-#                                                             "SAT", "SMI")))
-# 
-# forest_uva_ind <-
-#   forest_uva_ind %>% 
-#   ggplot(aes(y=Characteristic, x=OR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-#   geom_point() + 
-#   geom_errorbarh(height=.1) +
-#   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-#   theme_classic()+
-#   scale_x_log10()+
-#   labs(y="") %>% 
-#   # theme(text = element_text(size = 15),
-#   #       axis.title.y = element_blank())
-#   theme(text = element_text(size = 15),
-#         axis.title.y = element_blank(), legend.position = "none")+
-#   facet_wrap(. ~ Pred, nrow = 1,
-#              scales = "free",
-#              strip.position = "top")
-# forest_uva_ind
-# # ggsave("Figures/Figure Forest plot UVA OR model_20260526.tiff",
-# #        dpi = 600, units = "in",
-# #        width = 10,
-# #        height = 3, compression = "lzw"
-# #        )
-```
-
-#### MVA
+#### MVA - Table 2
 ```{r}
 tbl_dnmt3a_muscle_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 tbl_dnmt3a_vat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_sat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_imat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_ppm1d_muscle_ind_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 tbl_ppm1d_vat_ind_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_sat_ind_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_imat_ind_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_tet2_muscle_ind_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          smisdhr,
+          smi_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 tbl_tet2_vat_ind_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          vat_cm2_indexsdhr,
+          vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_sat_ind_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          sat_cm2_indexsdhr,
+          sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_imat_ind_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          imat_cm2_indexsdhr,
+          imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_muscle_ind_mva <- tbl_merge(list(tbl_dnmt3a_muscle_ind_mva, tbl_ppm1d_muscle_ind_mva, tbl_tet2_muscle_ind_mva), 
@@ -1446,19 +1336,19 @@ forest_mva_ind <-
   bind_rows(., tbl_dnmt3a_vat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("VAT (index)")) %>%
+              filter(Characteristic %in% c("VATI")) %>%
               mutate(model = "VAT") %>% mutate(Pred = "DNMT3A")) %>% 
   
   bind_rows(., tbl_dnmt3a_sat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("SAT (index)")) %>%
+              filter(Characteristic %in% c("SATI")) %>%
               mutate(model = "SAT") %>% mutate(Pred = "DNMT3A")) %>% 
   
   bind_rows(., tbl_dnmt3a_imat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("IMAT (index)")) %>%
+              filter(Characteristic %in% c("IMATI")) %>%
               mutate(model = "IMAT") %>% mutate(Pred = "DNMT3A")) %>% 
   
   bind_rows(., tbl_ppm1d_muscle_ind_mva %>%
@@ -1470,19 +1360,19 @@ forest_mva_ind <-
   bind_rows(., tbl_ppm1d_vat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("VAT (index)")) %>%
+              filter(Characteristic %in% c("VATI")) %>%
               mutate(model = "VAT") %>% mutate(Pred = "PPM1D")) %>% 
   
   bind_rows(., tbl_ppm1d_sat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("SAT (index)")) %>%
+              filter(Characteristic %in% c("SATI")) %>%
               mutate(model = "SAT") %>% mutate(Pred = "PPM1D")) %>% 
   
   bind_rows(., tbl_ppm1d_imat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("IMAT (index)")) %>%
+              filter(Characteristic %in% c("IMATI")) %>%
               mutate(model = "IMAT") %>% mutate(Pred = "PPM1D")) %>% 
   
   bind_rows(., tbl_tet2_muscle_ind_mva %>%
@@ -1494,19 +1384,19 @@ forest_mva_ind <-
   bind_rows(., tbl_tet2_vat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("VAT (index)")) %>%
+              filter(Characteristic %in% c("VATI")) %>%
               mutate(model = "VAT") %>% mutate(Pred = "TET2")) %>% 
   
   bind_rows(., tbl_tet2_sat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("SAT (index)")) %>%
+              filter(Characteristic %in% c("SATI")) %>%
               mutate(model = "SAT") %>% mutate(Pred = "TET2")) %>% 
   
   bind_rows(., tbl_tet2_imat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("IMAT (index)")) %>%
+              filter(Characteristic %in% c("IMATI")) %>%
               mutate(model = "IMAT") %>% mutate(Pred = "TET2")) %>% 
   
   bind_rows(., tbl_ch_muscle_ind_mva %>%
@@ -1518,35 +1408,34 @@ forest_mva_ind <-
   bind_rows(., tbl_ch_vat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("VAT (index)")) %>%
+              filter(Characteristic %in% c("VATI")) %>%
               mutate(model = "VAT") %>%  mutate(Pred = "CH")) %>% 
   
   bind_rows(., tbl_ch_sat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("SAT (index)")) %>%
+              filter(Characteristic %in% c("SATI")) %>%
               mutate(model = "SAT") %>%  mutate(Pred = "CH")) %>% 
   
   bind_rows(., tbl_ch_imat_ind_mva %>%
               as_tibble() %>% 
               `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-              filter(Characteristic %in% c("IMAT (index)")) %>%
+              filter(Characteristic %in% c("IMATI")) %>%
               mutate(model = "IMAT") %>%  mutate(Pred = "CH")) %>% 
   
   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
   mutate_at(c("OR", "lower", "upper"), ~ as.numeric(.)) %>% 
-  mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-  mutate(Characteristic = factor(Characteristic, levels = c("IMAT", 
-                                                            "SAT", "VAT", "SMI")))
+  mutate(Characteristic = factor(Characteristic, levels = c("IMATI", 
+                                                            "SATI", "VATI", "SMI")))
 facet_names <- as_labeller(c(
   "CH" = "CH",
   "DNMT3A" = "italic('DNMT3A')", "PPM1D" = "italic('PPM1D')", "TET2" = "italic('TET2')"), 
   default = label_parsed
 )
-forest_mva_ind <-
+forest_mva_ind_fig <-
   forest_mva_ind %>% 
   # mutate(Characteristic = case_when(
-  #   Characteristic == "VAT"        ~ "VATi",
+  #   Characteristic == "VAT"        ~ "VATI",
   #   TRUE   ~ Characteristic
   # )) %>% 
   ggplot(aes(y=Characteristic, x=OR, xmin=lower, xmax=upper)) +
@@ -1555,133 +1444,127 @@ forest_mva_ind <-
   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
   theme_classic()+
   scale_x_log10()+
-    labs(y="")+
-    scale_y_discrete(
-    breaks = c("IMAT", "VAT", "SAT", "SMI"),
-    labels = c(expression(IMAT[i]), expression(VAT[i]), expression(SAT[i]), "SMI")
-  )+
+  labs(y="")+
   # theme(text = element_text(size = 15),
   #       axis.title.y = element_blank())
   theme(text = element_text(size = 15),
         axis.title.y = element_blank(), legend.position = "none")+
   facet_wrap(. ~ Pred, nrow = 1,
-             scales = "free_x", axes = "margins",
+             # scales = "free_x", 
+             axes = "margins",
              strip.position = "top", labeller = facet_names)
-forest_mva_ind
-# ggsave("Figures/Figure 2A Forest plot MVA ind OR model_20260706.tiff",
+forest_mva_ind_fig
+# ggsave("Figures/Figure 2A Forest plot MVA ind OR model_20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 10,
 #        height = 3, compression = "lzw"
 #        )
 ```
 
-
-
 ### d. Association with body composition proportion
-Association estimates are reported per 1-SD increase in the body composition metric.   
-#### UVA
+#### UVA - Table S4
 ```{r}
 tbl_dnmt3a_muscle_prop_uva <- glm(mutation_gene_DNMT3A ~
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 tbl_dnmt3a_vat_prop_uva <- glm(mutation_gene_DNMT3A ~
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_sat_prop_uva <- glm(mutation_gene_DNMT3A ~
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_imat_prop_uva <- glm(mutation_gene_DNMT3A ~
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_ppm1d_muscle_prop_uva <- glm(mutation_gene_PPM1D ~
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 tbl_ppm1d_vat_prop_uva <- glm(mutation_gene_PPM1D ~
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_sat_prop_uva <- glm(mutation_gene_PPM1D ~
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_imat_prop_uva <- glm(mutation_gene_PPM1D ~
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_tet2_muscle_prop_uva <- glm(mutation_gene_TET2 ~
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 tbl_tet2_vat_prop_uva <- glm(mutation_gene_TET2 ~
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_sat_prop_uva <- glm(mutation_gene_TET2 ~
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_imat_prop_uva <- glm(mutation_gene_TET2 ~
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
-tbl_muscle_prop_uva <- tbl_merge(list(tbl_dnmt3a_muscle_prop_uva, tbl_ppm1d_muscle_prop_uva, tbl_tet2_muscle_prop_uva), 
-                        tab_spanner = c("Regression for DNMT3A mutation", 
-                                        "Regression for PPM1D mutation", 
+tbl_muscle_prop_uva <- tbl_merge(list(tbl_dnmt3a_muscle_prop_uva, tbl_ppm1d_muscle_prop_uva, tbl_tet2_muscle_prop_uva),
+                        tab_spanner = c("Regression for DNMT3A mutation",
+                                        "Regression for PPM1D mutation",
                                         "Regression for TET2 mutation"))
 tbl_vat_prop_uva <- tbl_merge(list(tbl_dnmt3a_vat_prop_uva, tbl_ppm1d_vat_prop_uva, tbl_tet2_vat_prop_uva))
 tbl_sat_prop_uva <- tbl_merge(list(tbl_dnmt3a_sat_prop_uva, tbl_ppm1d_sat_prop_uva, tbl_tet2_sat_prop_uva))
 tbl_imat_prop_uva <- tbl_merge(list(tbl_dnmt3a_imat_prop_uva, tbl_ppm1d_imat_prop_uva, tbl_tet2_imat_prop_uva))
 
-gt_tbl <- tbl_stack(list(tbl_muscle_prop_uva, tbl_vat_prop_uva, tbl_sat_prop_uva, tbl_imat_prop_uva), 
+gt_tbl <- tbl_stack(list(tbl_muscle_prop_uva, tbl_vat_prop_uva, tbl_sat_prop_uva, tbl_imat_prop_uva),
                     group_header = c("Muscle", "VAT",
-                                     "SAT", "IMAT")) %>% 
+                                     "SAT", "IMAT")) %>%
   as_gt(#rownames_to_stub = TRUE
   ) %>%
   gt::tab_options(row_group.border.top.color = "black",
@@ -1694,236 +1577,109 @@ gt_tbl <- tbl_stack(list(tbl_muscle_prop_uva, tbl_vat_prop_uva, tbl_sat_prop_uva
 gt_tbl
 ```
 
-```{r forest plot uva OR proportion}
-# forest_uva_prop <- 
-#   tbl_dnmt3a_muscle_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("Muscle proportion")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "DNMT3A") %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_vat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT proportion")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_sat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT proportion")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_dnmt3a_imat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT proportion")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "DNMT3A")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_muscle_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("Muscle proportion")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_vat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT proportion")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_sat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT proportion")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_ppm1d_imat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT proportion")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "PPM1D")) %>% 
-#   
-#   bind_rows(., tbl_tet2_muscle_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("Muscle proportion")) %>%
-#   mutate(model = "SM") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_vat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT proportion")) %>%
-#   mutate(model = "VAT") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_sat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT proportion")) %>%
-#   mutate(model = "SAT") %>% mutate(Pred = "TET2")) %>% 
-#   
-#   bind_rows(., tbl_tet2_imat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT proportion")) %>%
-#   mutate(model = "IMAT") %>% mutate(Pred = "TET2")) %>% 
-# 
-#   bind_rows(., tbl_ch_muscle_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("Muscle proportion")) %>%
-#   mutate(model = "SM") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_vat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("VAT proportion")) %>%
-#   mutate(model = "VAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_sat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("SAT proportion")) %>%
-#   mutate(model = "SAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   bind_rows(., tbl_ch_imat_prop_uva %>%
-#   as_tibble() %>% 
-#   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-#   filter(Characteristic %in% c("IMAT proportion")) %>%
-#   mutate(model = "IMAT") %>%  mutate(Pred = "CH")) %>% 
-#   
-#   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-#   mutate_at(c("OR", "lower", "upper"), ~ as.numeric(.)) %>% 
-#   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-#   mutate(Characteristic = factor(Characteristic, levels = c("IMAT", "VAT", 
-#                                                             "SAT", "Muscle")))
-# 
-# forest_uva_prop <-
-#   forest_uva_prop %>% 
-#   ggplot(aes(y=Characteristic, x=OR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-#   geom_point() + 
-#   geom_errorbarh(height=.1) +
-#   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-#   theme_classic()+
-#   scale_x_log10()+
-#   labs(y="") %>% 
-#   # theme(text = element_text(size = 15),
-#   #       axis.title.y = element_blank())
-#   theme(text = element_text(size = 15),
-#         axis.title.y = element_blank(), legend.position = "none")+
-#   facet_wrap(. ~ Pred, nrow = 1,
-#              scales = "free",
-#              strip.position = "top")
-# forest_uva_prop
-# # ggsave("Figures/Figure Forest plot UVA prop OR model_20260526.tiff",
-# #        dpi = 600, units = "in",
-# #        width = 10,
-# #        height = 3, compression = "lzw"
-# #        )
-```
 
-#### MVA
+#### MVA - Table 2
 ```{r}
 tbl_dnmt3a_muscle_prop_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for DNMT3A mutation")
 tbl_dnmt3a_vat_prop_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_sat_prop_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_dnmt3a_imat_prop_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_ppm1d_muscle_prop_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for PPM1D mutation")
 tbl_ppm1d_vat_prop_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_sat_prop_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_ppm1d_imat_prop_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_tet2_muscle_prop_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          muscle_proportionsdhr,
+          muscle_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p() %>% 
   modify_spanning_header(everything() ~ "Regression for TET2 mutation")
 tbl_tet2_vat_prop_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          vat_proportionsdhr,
+          vat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_sat_prop_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          sat_proportionsdhr,
+          sat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 tbl_tet2_imat_prop_mva <- glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
-          imat_proportionsdhr,
+          imat_proportion_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = TRUE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   bold_p()
 
 tbl_muscle_prop_mva <- tbl_merge(list(tbl_dnmt3a_muscle_prop_mva, tbl_ppm1d_muscle_prop_mva, tbl_tet2_muscle_prop_mva), 
@@ -2062,7 +1818,7 @@ facet_names <- as_labeller(c(
   "DNMT3A" = "italic('DNMT3A')", "PPM1D" = "italic('PPM1D')", "TET2" = "italic('TET2')"), 
   default = label_parsed
 )
-forest_mva_prop <-
+forest_mva_prop_fig <-
   forest_mva_prop %>% 
   ggplot(aes(y=Characteristic, x=OR, xmin=lower, xmax=upper)) +
   geom_point() + 
@@ -2078,8 +1834,8 @@ forest_mva_prop <-
   facet_wrap(. ~ Pred, nrow = 1,
              scales = "free_x", axes = "margins",
              strip.position = "top", labeller = facet_names)
-forest_mva_prop
-# ggsave("Figures/Figure 2B Forest plot MVA prop OR model_20260706.tiff",
+forest_mva_prop_fig
+# ggsave("Figures/Figure 2B Forest plot MVA prop OR model_20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 10,
 #        height = 3, compression = "lzw"
@@ -2095,11 +1851,11 @@ library(patchwork)
 # forest_mva_prop <- forest_mva_prop# +
 #   # labs(subtitle = 'Proportion')
 
-forest_mva_ind /
-  forest_mva_prop + plot_annotation(tag_levels = 'A')+
+forest_mva_ind_fig /
+  forest_mva_prop_fig + plot_annotation(tag_levels = 'A')+
   plot_layout(axis_titles = "collect")
 
-# ggsave("Figures/Figure 2 Forest plot MVA OR model_20260706.tiff",
+# ggsave("Figures/Figure 2 Forest plot MVA OR model_20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 9,
 #        height = 5, compression = "lzw"
@@ -2113,56 +1869,26 @@ glm(mutation_gene_DNMT3A ~
           muscle_hu_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for DNMT3A") %>% 
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  bold_p()
 glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           myosteatosis,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           sarcopenia,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 ```
 <br>
 
@@ -2172,56 +1898,26 @@ glm(mutation_gene_PPM1D ~
           muscle_hu_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for PPM1D") %>% 
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  bold_p()
 glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
           myosteatosis,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
           sarcopenia,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 ```
 <br>
 
@@ -2231,56 +1927,26 @@ glm(mutation_gene_TET2 ~
           muscle_hu_sdhr,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
   modify_spanning_header(everything() ~ "Regression for TET2") %>% 
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  bold_p()
 glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
           myosteatosis,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 glm(mutation_gene_TET2 ~
       age_at_diagnosis_num + sex + stage +
           sarcopenia,
     family = "binomial",
     data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE,
-                 intercept = FALSE) %>%
-  modify_table_styling(
-      columns = estimate,
-      rows = reference_row %in% TRUE,
-      missing_symbol = "Reference"
-    ) %>%
-        # merge all info
-        modify_column_merge(
-      pattern = "{estimate} ({conf.low}-{conf.high}; p={p.value})",
-      rows = !is.na(estimate)
-    ) %>%
-  remove_abbreviation()
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  bold_p()
 ```
 <br>
 
@@ -2304,16 +1970,503 @@ lymphoma_data %>%
 <!-- restric_white_patient <- lymphoma_data %>%  -->
 <!--   filter(race == "White") -->
 <!-- ``` -->
-
-
-
 <br>
+
+## 4. Regression for association with continuous CH VAF - Not used yet
+Select the highest VAF for continuous analysis (log2) or categorize raw VAF as ≥ 0.10 (coded 1) or < 0.10 (coded 0) for binary analysis.
+```{r}
+vaf_reg_dat <- ch_mutation %>% 
+  filter(!is.na(vaf)) %>%
+  select(mrn, vaf) %>% 
+  arrange(mrn, desc(vaf)) %>% 
+  mutate(log2_vaf = log2(vaf)) %>% 
+  mutate(vaf_cat = case_when(
+    vaf >= 0.10           ~ 1,
+    vaf < 0.10            ~ 0
+  )) %>% 
+  full_join(lymphoma_data, 
+            ., 
+            by = "mrn") %>% 
+  filter(!is.na(vaf))
+```
+
+### A. Continuous VAF
+
+#### a. BMI
+```{r}
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + stage + bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + stage + bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(log2_vaf ~
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(log2_vaf ~
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(log2_vaf ~
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(log2_vaf ~
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(log2_vaf ~
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(log2_vaf ~
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(log2_vaf ~
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(log2_vaf ~
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + stage +
+      muscle_hu_sdhr,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + stage +
+      myosteatosis,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + stage +
+      sarcopenia,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+
+```
+
+### B. Categorical VAF
+
+#### a. BMI
+```{r}
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + stage + bmi,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      bmi,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + stage + bmi_cat,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      bmi_cat,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(vaf_cat ~
+        smi_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(vaf_cat ~
+        vat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(vaf_cat ~
+        sat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(vaf_cat ~
+        imat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        smi_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        vat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        sat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        imat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(vaf_cat ~
+        muscle_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(vaf_cat ~
+        vat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(vaf_cat ~
+        sat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(vaf_cat ~
+        imat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        muscle_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        vat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        sat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        imat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + stage +
+      muscle_hu_sdhr,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + stage +
+      myosteatosis,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + stage +
+      sarcopenia,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+
+```
+<br>
+
 
 # VI. Survival - OS
 ## Univariable regression analysis
 Association estimates are reported per 1-SD increase in the body composition metric.
 
-## Univariable
+## Univariable - Table S6 (just first section of big table - UVA for BMI)
 ```{r HR uva cox clinical}
 tbl_main_surv <- tbl_uvregression(
   lymphoma_data,
@@ -2369,16 +2522,16 @@ tbl_uvregression(
 #   bold_p(t = .05) %>%
 #   add_nevent(location = "level") %>% add_n(location = "level") %>%
 #   bold_labels() %>% italicize_levels()
-tbl_indexsdhr_surv <- tbl_uvregression(
+tbl_index_sdhr_surv <- tbl_uvregression(
   lymphoma_data,
   method = coxph,
   y = Surv(time = os_time_from_treatment_months, event = os_event),
   exponentiate = TRUE,
-  include = c("smisdhr",
+  include = c("smi_sdhr",
               "sarcopenia", 
               "muscle_hu_sdhr", "myosteatosis",
-              "vat_cm2_indexsdhr", "sat_cm2_indexsdhr",
-              "imat_cm2_indexsdhr", "tat_cm2_indexsdhr",
+              "vat_cm2_index_sdhr", "sat_cm2_index_sdhr",
+              "imat_cm2_index_sdhr", "tat_cm2_index_sdhr",
               )) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
@@ -2399,7 +2552,7 @@ tbl_propsdhr_surv <- tbl_uvregression(
   method = coxph,
   y = Surv(time = os_time_from_treatment_months, event = os_event),
   exponentiate = TRUE,
-  include = c("muscle_proportionsdhr", "vat_proportionsdhr", "sat_proportionsdhr", "imat_proportionsdhr"
+  include = c("muscle_proportion_sdhr", "vat_proportion_sdhr", "sat_proportion_sdhr", "imat_proportion_sdhr"
               )) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
@@ -2420,7 +2573,7 @@ tbl_propsdhr_surv <- tbl_uvregression(
 ```
 
 ```{r gt table uva}
-gt_tbl <- tbl_stack(list(tbl_main_surv, tbl_indexsdhr_surv, tbl_propsdhr_surv), 
+gt_tbl <- tbl_stack(list(tbl_main_surv, tbl_index_sdhr_surv, tbl_propsdhr_surv), 
                     group_header = c("Clinical", 
                                      "1-SD normalized Indexed features",
                                      "1-SD normalized Tissue proportion")) %>%
@@ -2438,7 +2591,7 @@ gt_tbl
 
 
 ## Multivariable
-## MVA BMI
+## MVA BMI - Table S6
 ```{r HR mva bmi}
 coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
@@ -2457,29 +2610,30 @@ coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
   add_nevent(location = "level") %>% add_n(location = "level")
 ```
 
-### MVA BC
+### MVA BC - Table 3
 ```{r}
-tbl_1_surv <-
-  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level") %>% 
-  modify_header(label ~ "**MVA Indexed**")
+# tbl_1_surv <-
+#   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+#              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level") %>% 
+#   modify_header(label ~ "**MVA Indexed**")
 tbl_muscle_ind_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + smisdhr,
+          sex + stage + ch_status + smi_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+  add_nevent(location = "level") %>% add_n(location = "level") #%>% 
+  # modify_header(label ~ "**MVA Indexed**")
 tbl_sat_ind_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + sat_cm2_indexsdhr,
+          sex + stage + ch_status + sat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2487,7 +2641,7 @@ tbl_sat_ind_surv <-
 tbl_vat_ind_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + vat_cm2_indexsdhr,
+          sex + stage + ch_status + vat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2495,7 +2649,7 @@ tbl_vat_ind_surv <-
 tbl_imat_ind_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + imat_cm2_indexsdhr,
+          sex + stage + ch_status + imat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2503,17 +2657,17 @@ tbl_imat_ind_surv <-
 tbl_all_ind_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + smisdhr + 
-          sat_cm2_indexsdhr +
-          vat_cm2_indexsdhr + imat_cm2_indexsdhr,
+          sex + stage + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level")
 
-tbl_merge(list(tbl_1_surv, tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
+tbl_merge(list(tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
                tbl_imat_ind_surv, tbl_all_ind_surv),
-          tab_spanner = c("**Multivariable \nClinical only  = 'Reduced model'**",
+          tab_spanner = c(#"**Multivariable \nClinical only  = 'Reduced model'**",
                           "**Multivariable \nSingle BC model SM**",
                           "**Multivariable \nSingle BC model SAT**",
                           "**Multivariable \nSingle BC model VAT**",
@@ -2523,28 +2677,21 @@ tbl_merge(list(tbl_1_surv, tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_su
 ```
 <br>
 
+Table S7 (OS)
 ```{r}
-tbl_1_surv <-
-  coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level") %>% 
-  modify_header(label ~ "**MVA Proportion**")
 tbl_muscle_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + muscle_proportionsdhr,
+          sex + stage + ch_status + muscle_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+  add_nevent(location = "level") %>% add_n(location = "level") #%>% 
+  # modify_header(label ~ "**MVA Proportion**")
 tbl_sat_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + sat_proportionsdhr,
+          sex + stage + ch_status + sat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2552,7 +2699,7 @@ tbl_sat_prop_surv <-
 tbl_vat_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + vat_proportionsdhr,
+          sex + stage + ch_status + vat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2560,7 +2707,7 @@ tbl_vat_prop_surv <-
 tbl_imat_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + imat_proportionsdhr,
+          sex + stage + ch_status + imat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2569,16 +2716,16 @@ tbl_all_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
           sex + stage + ch_status + 
-          sat_proportionsdhr +
-          vat_proportionsdhr + imat_proportionsdhr + muscle_proportionsdhr,
+          sat_proportion_sdhr +
+          vat_proportion_sdhr + imat_proportion_sdhr + muscle_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level")
 
-tbl_merge(list(tbl_1_surv, tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
+tbl_merge(list(tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
                tbl_imat_prop_surv, tbl_all_prop_surv),
-          tab_spanner = c("**Multivariable \nClinical only  = 'Reduced model'**",
+          tab_spanner = c(#"**Multivariable \nClinical only  = 'Reduced model'**",
                           "**Multivariable \nSingle BC model SM**",
                           "**Multivariable \nSingle BC model SAT**",
                           "**Multivariable \nSingle BC model VAT**",
@@ -2588,7 +2735,7 @@ tbl_merge(list(tbl_1_surv, tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop
 ```
 <br>
 
-## Forest plot
+## Forest plot OS
 ```{r forest plot mva HR index}
 forest_mva_ind_surv <- 
   tbl_muscle_ind_surv %>%
@@ -2844,7 +2991,7 @@ library(patchwork)
   (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = 'A')+
   plot_layout(heights = unit(c(2, 1), c('null', 'null')))
 
-# ggsave("Figures/Figure 1 Forest abcd plot20260706.tiff",
+# ggsave("Figures/Figure 1 Forest abcd plot20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 8,
 #        height = 6, compression = "lzw"
@@ -2854,7 +3001,7 @@ library(patchwork)
   (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = list(c("A", "", "B", "")))+
   plot_layout(heights = unit(c(2, 1), c('null', 'null')))
 
-# ggsave("Figures/Figure 1 Forest ab plot20260706.tiff",
+# ggsave("Figures/Figure 1 Forest ab plot20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 8,
 #        height = 6, compression = "lzw"
@@ -2880,7 +3027,7 @@ library(patchwork)
 ```{r}
 coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + tat_cm2_indexsdhr,
+          sex + stage + ch_status + tat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -2996,7 +3143,6 @@ ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
 
 # VII. Survival - PFS
 ## Univariable regression analysis
-Association estimates are reported per 1-SD increase in the body composition metric.
 
 ## Univariable
 ```{r HR uva cox clinical pfs}
@@ -3030,16 +3176,16 @@ tbl_uvregression(
   add_nevent(location = "level") %>% add_n(location = "level") %>%
   bold_labels() %>% italicize_levels()
 
-tbl_indexsdhr_surv <- tbl_uvregression(
+tbl_index_sdhr_surv <- tbl_uvregression(
   lymphoma_data,
   method = coxph,
   y = Surv(time = pfs_time_from_treatment_months, event = pfs_event),
   exponentiate = TRUE,
-  include = c("smisdhr",
+  include = c("smi_sdhr",
               "sarcopenia", 
               "muscle_hu_sdhr", "myosteatosis",
-              "vat_cm2_indexsdhr", "sat_cm2_indexsdhr",
-              "imat_cm2_indexsdhr", "tat_cm2_indexsdhr",
+              "vat_cm2_index_sdhr", "sat_cm2_index_sdhr",
+              "imat_cm2_index_sdhr", "tat_cm2_index_sdhr",
               )) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
@@ -3050,7 +3196,7 @@ tbl_propsdhr_surv <- tbl_uvregression(
   method = coxph,
   y = Surv(time = pfs_time_from_treatment_months, event = pfs_event),
   exponentiate = TRUE,
-  include = c("muscle_proportionsdhr", "vat_proportionsdhr", "sat_proportionsdhr", "imat_proportionsdhr"
+  include = c("muscle_proportion_sdhr", "vat_proportion_sdhr", "sat_proportion_sdhr", "imat_proportion_sdhr"
               )) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level") %>%
@@ -3058,7 +3204,7 @@ tbl_propsdhr_surv <- tbl_uvregression(
 ```
 
 ```{r gt table uva pfs}
-gt_tbl <- tbl_stack(list(tbl_main_surv, tbl_indexsdhr_surv, tbl_propsdhr_surv), 
+gt_tbl <- tbl_stack(list(tbl_main_surv, tbl_index_sdhr_surv, tbl_propsdhr_surv), 
                     group_header = c("Clinical", 
                                      "1-SD normalized Indexed features",
                                      "1-SD normalized Tissue proportion")) %>%
@@ -3095,29 +3241,21 @@ coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
   add_nevent(location = "level") %>% add_n(location = "level")
 ```
 
-### MVA BC
+### MVA BC - Table 4
 ```{r mva bc table pfs}
-tbl_1_surv <-
-  coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
-             event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level") %>% 
-  modify_header(label ~ "**MVA Indexed**")
 tbl_muscle_ind_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + smisdhr,
+          sex + stage + ch_status + smi_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+  add_nevent(location = "level") %>% add_n(location = "level") #%>% 
+  # modify_header(label ~ "**MVA Indexed**")
 tbl_sat_ind_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + sat_cm2_indexsdhr,
+          sex + stage + ch_status + sat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3125,7 +3263,7 @@ tbl_sat_ind_surv <-
 tbl_vat_ind_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + vat_cm2_indexsdhr,
+          sex + stage + ch_status + vat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3133,7 +3271,7 @@ tbl_vat_ind_surv <-
 tbl_imat_ind_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + imat_cm2_indexsdhr,
+          sex + stage + ch_status + imat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3141,17 +3279,17 @@ tbl_imat_ind_surv <-
 tbl_all_ind_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + smisdhr + 
-          sat_cm2_indexsdhr +
-          vat_cm2_indexsdhr + imat_cm2_indexsdhr,
+          sex + stage + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level")
 
-tbl_merge(list(tbl_1_surv, tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
+tbl_merge(list(tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
                tbl_imat_ind_surv, tbl_all_ind_surv),
-          tab_spanner = c("**Multivariable \nClinical only  = 'Reduced model'**",
+          tab_spanner = c(#"**Multivariable \nClinical only  = 'Reduced model'**",
                           "**Multivariable \nSingle BC model SM**",
                           "**Multivariable \nSingle BC model SAT**",
                           "**Multivariable \nSingle BC model VAT**",
@@ -3161,28 +3299,29 @@ tbl_merge(list(tbl_1_surv, tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_su
 ```
 <br>
 
+Table S7 (PFS)
 ```{r mva bc prop table pfs}
-tbl_1_surv <-
-  coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
-             event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level") %>% 
-  modify_header(label ~ "**MVA Proportion**")
+# tbl_1_surv <-
+#   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+#              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
 tbl_muscle_prop_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + muscle_proportionsdhr,
+          sex + stage + ch_status + muscle_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+  add_nevent(location = "level") %>% add_n(location = "level") #%>% 
+  # modify_header(label ~ "**MVA Proportion**")
 tbl_sat_prop_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + sat_proportionsdhr,
+          sex + stage + ch_status + sat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3190,7 +3329,7 @@ tbl_sat_prop_surv <-
 tbl_vat_prop_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + vat_proportionsdhr,
+          sex + stage + ch_status + vat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3198,7 +3337,7 @@ tbl_vat_prop_surv <-
 tbl_imat_prop_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + imat_proportionsdhr,
+          sex + stage + ch_status + imat_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
@@ -3207,16 +3346,16 @@ tbl_all_prop_surv <-
   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
           sex + stage + ch_status + 
-          sat_proportionsdhr +
-          vat_proportionsdhr + imat_proportionsdhr + muscle_proportionsdhr,
+          sat_proportion_sdhr +
+          vat_proportion_sdhr + imat_proportion_sdhr + muscle_proportion_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
   add_nevent(location = "level") %>% add_n(location = "level")
 
-tbl_merge(list(tbl_1_surv, tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
+tbl_merge(list(tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
                tbl_imat_prop_surv, tbl_all_prop_surv),
-          tab_spanner = c("**Multivariable \nClinical only  = 'Reduced model'**",
+          tab_spanner = c(#"**Multivariable \nClinical only  = 'Reduced model'**",
                           "**Multivariable \nSingle BC model SM**",
                           "**Multivariable \nSingle BC model SAT**",
                           "**Multivariable \nSingle BC model VAT**",
@@ -3235,7 +3374,7 @@ tbl_merge(list(tbl_1_surv, tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop
 ```{r other mva pfs}
 coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + tat_cm2_indexsdhr,
+          sex + stage + ch_status + tat_cm2_index_sdhr,
         data = lymphoma_data)  %>%
   tbl_regression(exponentiate = TRUE) %>%
   bold_p(t = .05) %>%
