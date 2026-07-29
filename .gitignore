@@ -18,6 +18,7 @@
 *.pdf
 *.rds
 *.docx
+*.txt
 *.pptx
 
 # Output folder

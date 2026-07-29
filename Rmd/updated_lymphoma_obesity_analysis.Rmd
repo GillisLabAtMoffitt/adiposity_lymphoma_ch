@@ -233,41 +233,41 @@ lymphoma_data <- lymphoma_data %>%
 
 lymphoma_data <- lymphoma_data %>% 
   # Make 1-standard deviation z score
-  # mutate(across(c("smi",
+  mutate(across(c("smi", "muscle_hu",
+                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+                  "tat_cm2_index"#,
+                  # contains("_proportion")
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
+  # group_by(sex) %>% 
+  # mutate(across(c("muscle_hu", "smi",
   #                 "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
-  #                 "tat_cm2_index"#,
-  #                 # contains("_proportion")
-  #                 ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
-  group_by(sex) %>% 
-  mutate(across(c("muscle_hu", "smi",
-                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
-                  "tat_cm2_index",
-                  ends_with("_proportion")
-                  ), ~ mean(., na.rm = TRUE) , .names = "{.col}_mean")) %>% 
-  mutate(across(c("muscle_hu", "smi",
-                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
-                  "tat_cm2_index",
-                  ends_with("_proportion")
-                  ), ~ sd(., na.rm = TRUE) , .names = "{.col}_sd")) %>% 
-  ungroup() %>% 
-  mutate(muscle_hu_sdhr = (muscle_hu * muscle_hu_mean) / muscle_hu_sd) %>% 
-  mutate(smi_sdhr = (smi * smi_mean) / smi_sd) %>% 
-  mutate(vat_cm2_index_sdhr = (vat_cm2_index * vat_cm2_index_mean) / vat_cm2_index_sd) %>% 
-  mutate(sat_cm2_index_sdhr = (sat_cm2_index * sat_cm2_index_mean) / sat_cm2_index_sd) %>% 
-  mutate(imat_cm2_index_sdhr = (imat_cm2_index * imat_cm2_index_mean) / imat_cm2_index_sd) %>% 
-  mutate(tat_cm2_index_sdhr = (tat_cm2_index * tat_cm2_index_mean) / tat_cm2_index_sd) %>% 
-  mutate(muscle_proportion_sdhr = (muscle_proportion * muscle_proportion_mean) / muscle_proportion_sd) %>% 
-  mutate(vat_proportion_sdhr = (vat_proportion * vat_proportion_mean) / vat_proportion_sd) %>% 
-  mutate(sat_proportion_sdhr = (sat_proportion * sat_proportion_mean) / sat_proportion_sd) %>% 
-  mutate(imat_proportion_sdhr = (imat_proportion * imat_proportion_mean) / imat_proportion_sd) #%>% 
+  #                 "tat_cm2_index",
+  #                 ends_with("_proportion")
+  #                 ), ~ mean(., na.rm = TRUE) , .names = "{.col}_mean")) %>% 
+  # mutate(across(c("muscle_hu", "smi",
+  #                 "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+  #                 "tat_cm2_index",
+  #                 ends_with("_proportion")
+  #                 ), ~ sd(., na.rm = TRUE) , .names = "{.col}_sd")) %>% 
+  # ungroup() %>% 
+  # mutate(muscle_hu_sdhr = (muscle_hu - muscle_hu_mean) / muscle_hu_sd) %>% 
+  # mutate(smi_sdhr = (smi - smi_mean) / smi_sd) %>% 
+  # mutate(vat_cm2_index_sdhr = (vat_cm2_index - vat_cm2_index_mean) / vat_cm2_index_sd) %>% 
+  # mutate(sat_cm2_index_sdhr = (sat_cm2_index - sat_cm2_index_mean) / sat_cm2_index_sd) %>% 
+  # mutate(imat_cm2_index_sdhr = (imat_cm2_index - imat_cm2_index_mean) / imat_cm2_index_sd) %>% 
+  # mutate(tat_cm2_index_sdhr = (tat_cm2_index - tat_cm2_index_mean) / tat_cm2_index_sd) %>% 
+  # mutate(muscle_proportion_sdhr = (muscle_proportion - muscle_proportion_mean) / muscle_proportion_sd) %>% 
+  # mutate(vat_proportion_sdhr = (vat_proportion - vat_proportion_mean) / vat_proportion_sd) %>% 
+  # mutate(sat_proportion_sdhr = (sat_proportion - sat_proportion_mean) / sat_proportion_sd) %>% 
+  # mutate(imat_proportion_sdhr = (imat_proportion - imat_proportion_mean) / imat_proportion_sd) #%>% 
   
   # select(mrn, sex, contains("imat"), -contains("tertcat"))
   
 
-# lymphoma_data <- lymphoma_data %>% 
-#   # Make 1-standard deviation increase of the height indexed feature
-#   mutate(across(c(contains("_proportion") & where(is.numeric)
-#                   ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}sdhr"))
+lymphoma_data <- lymphoma_data %>%
+  # Make 1-standard deviation increase of the height indexed feature
+  mutate(across(c(contains("_proportion") & where(is.numeric)
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
 ```
 
 ```{r}
@@ -985,6 +985,17 @@ lymphoma_data %>%
   modify_header(label ~ "**CH mutations**",
                 all_stat_cols() ~ "**{level}**, N = {n}")
 
+lymphoma_data %>%
+  filter(!is.na(number_of_mutation_per_patient)) |> 
+  select(number_of_mutation_per_patient, bmi, bmi_cat) |> 
+  ggplot(aes(x = as.factor(number_of_mutation_per_patient), y = bmi, 
+             color = as.factor(number_of_mutation_per_patient)))+
+  geom_boxplot(outlier.shape = NA)+
+  geom_jitter(color = "grey")+
+  labs(x = "Number of CH mutations per patient")+
+  scale_color_viridis_d(option = "A", end = c(0.6))+
+  theme(legend.position = "none")
+         
 ch_mutation %>% 
   select(vaf, depth) %>% 
   tbl_summary() %>% 
@@ -1630,6 +1641,7 @@ tbl_ppm1d_vat_prop_mva <- glm(mutation_gene_PPM1D ~
     data = lymphoma_data) %>%
   tbl_regression(exponentiate = TRUE
                  ) %>%
+  add_global_p(keep = TRUE, test = "LR", type = "III", include = vat_proportion_sdhr) |> 
   bold_p()
 tbl_ppm1d_sat_prop_mva <- glm(mutation_gene_PPM1D ~
       age_at_diagnosis_num + sex + stage +
@@ -1832,7 +1844,8 @@ forest_mva_prop_fig <-
   theme(text = element_text(size = 15),
         axis.title.y = element_blank(), legend.position = "none")+
   facet_wrap(. ~ Pred, nrow = 1,
-             scales = "free_x", axes = "margins",
+             # scales = "free_x", 
+             axes = "margins",
              strip.position = "top", labeller = facet_names)
 forest_mva_prop_fig
 # ggsave("Figures/Figure 2B Forest plot MVA prop OR model_20260721.tiff",
@@ -1972,13 +1985,14 @@ lymphoma_data %>%
 <!-- ``` -->
 <br>
 
-## 4. Regression for association with continuous CH VAF - Not used yet
+## 4. Regression for association with CH VAF - Not used yet
 Select the highest VAF for continuous analysis (log2) or categorize raw VAF as ≥ 0.10 (coded 1) or < 0.10 (coded 0) for binary analysis.
 ```{r}
 vaf_reg_dat <- ch_mutation %>% 
   filter(!is.na(vaf)) %>%
   select(mrn, vaf) %>% 
   arrange(mrn, desc(vaf)) %>% 
+  distinct(mrn, .keep_all = TRUE) |> 
   mutate(log2_vaf = log2(vaf)) %>% 
   mutate(vaf_cat = case_when(
     vaf >= 0.10           ~ 1,
@@ -1990,7 +2004,43 @@ vaf_reg_dat <- ch_mutation %>%
   filter(!is.na(vaf))
 ```
 
-### A. Continuous VAF
+```{r}
+vaf_reg_dat |> 
+  select(vaf, log2_vaf, bmi, bmi_cat) |> 
+  ggplot(aes(x = bmi, y = log2_vaf))+
+  geom_point()+
+  xlim(15, 50)+
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))#, 
+           # label.x = 4.5, label.y = 30
+           )
+
+vaf_reg_dat |> 
+  select(vaf, log2_vaf, bmi, bmi_cat) |> 
+  ggplot(aes(x = bmi_cat, y = log2_vaf, color = bmi_cat))+
+  geom_boxplot()+
+  geom_jitter(color = "grey")+
+  scale_color_viridis_d(option = "G", end = c(0.6),
+                        limits = c("<25",
+                                   "≥25 - <30",
+                                   "≥30"))+
+  coord_flip()+
+  theme(#axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        #axis.ticks.y = element_blank(),
+        legend.position = "bottom")+
+  stat_compare_means(comparisons = list(
+    c("<25", "≥25 - <30"),
+    c("<25", "≥30"),
+    c("≥25 - <30", "≥30")
+  ),
+  method = "wilcox.test", label = "p.format" )
+
+
+```
+
+
+### A. Continuous LOG2 VAF
 
 #### a. BMI
 ```{r}
@@ -2225,7 +2275,247 @@ glm(log2_vaf ~
 
 ```
 
-### B. Categorical VAF
+
+### B. Continuous RAW VAF
+#### a. BMI
+```{r}
+glm(vaf ~
+      age_at_diagnosis_num + sex + stage + bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex + stage + bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(vaf ~
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(vaf ~
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(vaf ~
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(vaf ~
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(vaf ~
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(vaf ~
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(vaf ~
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(vaf ~
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex + stage +
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(vaf ~
+      age_at_diagnosis_num + sex + stage +
+      muscle_hu_sdhr,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex + stage +
+      myosteatosis,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex + stage +
+      sarcopenia,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+
+```
+
+
+
+
+
+
+### C. Categorical VAF
 
 #### a. BMI
 ```{r}
@@ -2461,6 +2751,709 @@ glm(vaf_cat ~
 ```
 <br>
 
+### A1. Continuous LOG2 VAF - stage
+#### a. BMI
+```{r}
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex + bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(log2_vaf ~
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(log2_vaf ~
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(log2_vaf ~
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(log2_vaf ~
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(log2_vaf ~
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(log2_vaf ~
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(log2_vaf ~
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(log2_vaf ~
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex +
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex +
+      muscle_hu_sdhr,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex +
+      myosteatosis,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+glm(log2_vaf ~
+      age_at_diagnosis_num + sex +
+      sarcopenia,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+
+```
+
+### B1. Continuous RAW VAF - stage
+#### a. BMI
+```{r}
+glm(vaf ~
+      age_at_diagnosis_num + sex + bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      bmi,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex + bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      bmi_cat,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(vaf ~
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(vaf ~
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(vaf ~
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(vaf ~
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(vaf ~
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(vaf ~
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(vaf ~
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(vaf ~
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        muscle_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        vat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        sat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(vaf ~
+        age_at_diagnosis_num + sex +
+        imat_proportion_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(vaf ~
+      age_at_diagnosis_num + sex +
+      muscle_hu_sdhr,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex +
+      myosteatosis,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+glm(vaf ~
+      age_at_diagnosis_num + sex +
+      sarcopenia,
+    # family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+
+```
+
+### C1. Categorical VAF - stage
+
+#### a. BMI
+```{r}
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + bmi,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      bmi,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex + bmi_cat,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      bmi_cat,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+```
+
+
+#### b. Association with height-indexed body composition features
+#### UVA
+```{r}
+tbl_vaf_muscle_ind_uva <- 
+  glm(vaf_cat ~
+        smi_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_ind_uva
+tbl_vaf_vat_ind_uva <- 
+  glm(vaf_cat ~
+        vat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_ind_uva
+tbl_vaf_sat_ind_uva <- 
+  glm(vaf_cat ~
+        sat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_ind_uva
+tbl_vaf_imat_ind_uva <- 
+  glm(vaf_cat ~
+        imat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_ind_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        smi_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_ind_mva
+tbl_vaf_vat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        vat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_ind_mva
+tbl_vaf_sat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        sat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_ind_mva
+tbl_vaf_imat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        imat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_ind_mva
+```
+
+
+#### c. Association with body composition proportion
+#### UVA
+```{r}
+tbl_vaf_muscle_prop_uva <- 
+  glm(vaf_cat ~
+        muscle_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_prop_uva
+tbl_vaf_vat_prop_uva <- 
+  glm(vaf_cat ~
+        vat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_prop_uva
+tbl_vaf_sat_prop_uva <- 
+  glm(vaf_cat ~
+        sat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_prop_uva
+tbl_vaf_imat_prop_uva <- 
+  glm(vaf_cat ~
+        imat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_prop_uva
+```
+
+#### MVA
+```{r}
+tbl_vaf_muscle_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        muscle_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_muscle_prop_mva
+tbl_vaf_vat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        vat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_vat_prop_mva
+tbl_vaf_sat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        sat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_sat_prop_mva
+tbl_vaf_imat_prop_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex +
+        imat_proportion_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+tbl_vaf_imat_prop_mva
+```
+
+#### d. Association with others
+```{r}
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex +
+      muscle_hu_sdhr,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex +
+      myosteatosis,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+glm(vaf_cat ~
+      age_at_diagnosis_num + sex +
+      sarcopenia,
+    family = "binomial",
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+
+```
+<br>
 
 # VI. Survival - OS
 ## Univariable regression analysis
@@ -2735,278 +3728,278 @@ tbl_merge(list(tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
 ```
 <br>
 
-## Forest plot OS
-```{r forest plot mva HR index}
-forest_mva_ind_surv <- 
-  tbl_muscle_ind_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","SMI")) %>%
-  mutate(model = "SMI") %>% 
-  
-  bind_rows(., tbl_sat_ind_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","SAT (index)")) %>%
-  mutate(model = "SAT")) %>% 
-  
-  bind_rows(., tbl_vat_ind_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","VAT (index)")) %>%
-  mutate(model = "VAT")) %>% 
-  
-  bind_rows(., tbl_imat_ind_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","IMAT (index)")) %>%
-  mutate(model = "IMAT")) %>% 
-  separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-  mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) %>% 
-  mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-  mutate(model = factor(model, levels = c("SMI", 
-                                          "VAT", "SAT","IMAT")))
+<!-- ## Forest plot OS -->
+<!-- ```{r forest plot mva HR index} -->
+<!-- forest_mva_ind_surv <-  -->
+<!--   tbl_muscle_ind_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","SMI")) %>% -->
+<!--   mutate(model = "SMI") %>%  -->
 
-forest_mva_ind_surv_fig <-
-  forest_mva_ind_surv %>% 
-  mutate(Characteristic = fct_relevel(Characteristic, "CH", after = Inf)) %>% 
-  ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-  geom_point() + 
-  geom_errorbarh(height=.1) +
-  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-  theme_classic()+
-  scale_x_log10()+
-  labs(y="", x = "HR (95% CI)")+
-  scale_y_discrete(
-    breaks = c("IMAT", "VAT", "SAT", "SMI", "CH"),
-    labels = c(expression(IMAT[i]), expression(VAT[i]), expression(SAT[i]), "SMI", "CH")
-  )+
-  theme(text = element_text(size = 15),
-        axis.title.y = element_blank(), legend.position = "none",
-        strip.background = element_blank(),
-        strip.text = element_blank())+
-  facet_wrap(. ~ model, ncol = 1,
-             scales = "free",
-             strip.position = "right")
-# forest_mva_ind_surv
-# ggsave("Figures/Figure 1A Forest plot MVA index BC model20260407.tiff",
-#        dpi = 600, units = "in",
-#        width = 4,
-#        height = 5, compression = "lzw"
-#        )
-```
+<!--   bind_rows(., tbl_sat_ind_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","SAT (index)")) %>% -->
+<!--   mutate(model = "SAT")) %>%  -->
 
-```{r forest plot mva HR proportion}
-forest_mva_prop_surv <- 
-  tbl_muscle_prop_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","Muscle proportion")) %>%
-  mutate(model = "SMI") %>% 
-  
-  bind_rows(., tbl_sat_prop_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","SAT proportion")) %>%
-  mutate(model = "SAT")) %>% 
-  
-  bind_rows(., tbl_vat_prop_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","VAT proportion")) %>%
-  mutate(model = "VAT")) %>% 
-  
-  bind_rows(., tbl_imat_prop_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","IMAT proportion")) %>%
-  mutate(model = "IMAT")) %>% 
-  separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-  mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) %>% 
-  mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-  mutate(Characteristic = case_when(
-    Characteristic == "Muscle"          ~ "SM",
-    TRUE                                ~ Characteristic
-  )) %>% 
-  mutate(model = factor(model, levels = c("SMI", 
-                                          "VAT", "SAT","IMAT")))
+<!--   bind_rows(., tbl_vat_ind_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","VAT (index)")) %>% -->
+<!--   mutate(model = "VAT")) %>%  -->
 
-forest_mva_prop_surv_fig <-
-  forest_mva_prop_surv %>% 
-        mutate(Characteristic = fct_relevel(Characteristic, "CH", after = Inf)) %>% 
-  ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-  geom_point() + 
-  geom_errorbarh(height=.1) +
-  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-  theme_classic()+
-  scale_x_log10()+
-  labs(y="", x = "HR (95% CI)")+
-  theme(text = element_text(size = 15),
-        axis.title.y = element_blank(), legend.position = "none",
-        trip.background = element_blank(),
-  strip.text = element_blank())+
-  facet_wrap(. ~ model, ncol = 1,
-             scales = "free",
-             strip.position = "right")
-# forest_mva_prop_surv
-# ggsave("Figures/Figure 1B Forest plot MVA prop BC model20260407.tiff",
-#        dpi = 600, units = "in",
-#        width = 4,
-#        height = 5, compression = "lzw"
-#        )
-```
+<!--   bind_rows(., tbl_imat_ind_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","IMAT (index)")) %>% -->
+<!--   mutate(model = "IMAT")) %>%  -->
+<!--   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>%  -->
+<!--   mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) %>%  -->
+<!--   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>%  -->
+<!--   mutate(model = factor(model, levels = c("SMI",  -->
+<!--                                           "VAT", "SAT","IMAT"))) -->
+
+<!-- forest_mva_ind_surv_fig <- -->
+<!--   forest_mva_ind_surv %>%  -->
+<!--   mutate(Characteristic = fct_relevel(Characteristic, "CH", after = Inf)) %>%  -->
+<!--   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) + -->
+<!--   geom_point() +  -->
+<!--   geom_errorbarh(height=.1) + -->
+<!--   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) + -->
+<!--   theme_classic()+ -->
+<!--   scale_x_log10()+ -->
+<!--   labs(y="", x = "HR (95% CI)")+ -->
+<!--   scale_y_discrete( -->
+<!--     breaks = c("IMAT", "VAT", "SAT", "SMI", "CH"), -->
+<!--     labels = c(expression(IMAT[i]), expression(VAT[i]), expression(SAT[i]), "SMI", "CH") -->
+<!--   )+ -->
+<!--   theme(text = element_text(size = 15), -->
+<!--         axis.title.y = element_blank(), legend.position = "none", -->
+<!--         strip.background = element_blank(), -->
+<!--         strip.text = element_blank())+ -->
+<!--   facet_wrap(. ~ model, ncol = 1, -->
+<!--              scales = "free", -->
+<!--              strip.position = "right") -->
+<!-- # forest_mva_ind_surv -->
+<!-- # ggsave("Figures/Figure 1A Forest plot MVA index BC model20260407.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 4, -->
+<!-- #        height = 5, compression = "lzw" -->
+<!-- #        ) -->
+<!-- ``` -->
+
+<!-- ```{r forest plot mva HR proportion} -->
+<!-- forest_mva_prop_surv <-  -->
+<!--   tbl_muscle_prop_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","Muscle proportion")) %>% -->
+<!--   mutate(model = "SMI") %>%  -->
+
+<!--   bind_rows(., tbl_sat_prop_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","SAT proportion")) %>% -->
+<!--   mutate(model = "SAT")) %>%  -->
+
+<!--   bind_rows(., tbl_vat_prop_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","VAT proportion")) %>% -->
+<!--   mutate(model = "VAT")) %>%  -->
+
+<!--   bind_rows(., tbl_imat_prop_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","IMAT proportion")) %>% -->
+<!--   mutate(model = "IMAT")) %>%  -->
+<!--   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>%  -->
+<!--   mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) %>%  -->
+<!--   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>%  -->
+<!--   mutate(Characteristic = case_when( -->
+<!--     Characteristic == "Muscle"          ~ "SM", -->
+<!--     TRUE                                ~ Characteristic -->
+<!--   )) %>%  -->
+<!--   mutate(model = factor(model, levels = c("SMI",  -->
+<!--                                           "VAT", "SAT","IMAT"))) -->
+
+<!-- forest_mva_prop_surv_fig <- -->
+<!--   forest_mva_prop_surv %>%  -->
+<!--         mutate(Characteristic = fct_relevel(Characteristic, "CH", after = Inf)) %>%  -->
+<!--   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) + -->
+<!--   geom_point() +  -->
+<!--   geom_errorbarh(height=.1) + -->
+<!--   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) + -->
+<!--   theme_classic()+ -->
+<!--   scale_x_log10()+ -->
+<!--   labs(y="", x = "HR (95% CI)")+ -->
+<!--   theme(text = element_text(size = 15), -->
+<!--         axis.title.y = element_blank(), legend.position = "none", -->
+<!--         trip.background = element_blank(), -->
+<!--   strip.text = element_blank())+ -->
+<!--   facet_wrap(. ~ model, ncol = 1, -->
+<!--              scales = "free", -->
+<!--              strip.position = "right") -->
+<!-- # forest_mva_prop_surv -->
+<!-- # ggsave("Figures/Figure 1B Forest plot MVA prop BC model20260407.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 4, -->
+<!-- #        height = 5, compression = "lzw" -->
+<!-- #        ) -->
+<!-- ``` -->
 
 
-```{r}
-forest_prop_surv <- 
-  tbl_all_prop_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH","SAT proportion",
-                               "VAT proportion",
-                               "IMAT proportion", "Muscle proportion") ) %>% 
-  mutate(Characteristic = str_remove_all(Characteristic, " proportion")) %>% 
-  mutate(Characteristic = factor(Characteristic, 
-                                 levels = c("IMAT",
-                                            "VAT",
-                                            "SAT",
-                                            "Muscle","CH"
-                                 ))) %>% 
-  separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-  
-  mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) #%>% 
-  # mutate(name= case_when(
-  #   Characteristic == "High marrow burden (≥50%)"      ~ "High marrow \nburden (≥50%)",
-  #   Characteristic == "gr3_cytopenia_-5d"      ~ "Grade ≥ 3 Cytopenia \nat Day -5",
-  #   Characteristic == "Steroid Use"      ~ "Steroid use",
-  #   Characteristic == "Number of prior lines of therapy"      ~ "Number of prior \nlines of therapy",
-  #   Characteristic == "baseline_ferritin_cat"      ~ "Baseline ferritin"
-  # ))
+<!-- ```{r} -->
+<!-- forest_prop_surv <-  -->
+<!--   tbl_all_prop_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH","SAT proportion", -->
+<!--                                "VAT proportion", -->
+<!--                                "IMAT proportion", "Muscle proportion") ) %>%  -->
+<!--   mutate(Characteristic = str_remove_all(Characteristic, " proportion")) %>%  -->
+<!--   mutate(Characteristic = factor(Characteristic,  -->
+<!--                                  levels = c("IMAT", -->
+<!--                                             "VAT", -->
+<!--                                             "SAT", -->
+<!--                                             "Muscle","CH" -->
+<!--                                  ))) %>%  -->
+<!--   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>%  -->
 
-forest_prop_surv_fig <-
-  forest_prop_surv %>% 
-  ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-  geom_point() + 
-  geom_errorbarh(height=.1) +
-  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-  theme_classic()+
-  scale_x_log10()+
-    scale_y_discrete(
-    breaks = c("IMAT", "VAT", "SAT", "Muscle", "CH"),
-    labels = c("IMAT", "VAT", "SAT", "SM", "CH")
-  )+
-  labs(y="", x = "HR (95% CI)")+
-  theme(text = element_text(size = 15),
-        axis.title.y = element_blank(), legend.position = "none")
-# forest_prop_surv_fig
+<!--   mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) #%>%  -->
+<!--   # mutate(name= case_when( -->
+<!--   #   Characteristic == "High marrow burden (≥50%)"      ~ "High marrow \nburden (≥50%)", -->
+<!--   #   Characteristic == "gr3_cytopenia_-5d"      ~ "Grade ≥ 3 Cytopenia \nat Day -5", -->
+<!--   #   Characteristic == "Steroid Use"      ~ "Steroid use", -->
+<!--   #   Characteristic == "Number of prior lines of therapy"      ~ "Number of prior \nlines of therapy", -->
+<!--   #   Characteristic == "baseline_ferritin_cat"      ~ "Baseline ferritin" -->
+<!--   # )) -->
 
-# ggsave("Figures/Figure 1D Forest plot MVA proportion full model20260407.tiff",
-#        dpi = 600, units = "in",
-#        width = 6,
-#        height = 5, compression = "lzw"
-#        )
+<!-- forest_prop_surv_fig <- -->
+<!--   forest_prop_surv %>%  -->
+<!--   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) + -->
+<!--   geom_point() +  -->
+<!--   geom_errorbarh(height=.1) + -->
+<!--   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) + -->
+<!--   theme_classic()+ -->
+<!--   scale_x_log10()+ -->
+<!--     scale_y_discrete( -->
+<!--     breaks = c("IMAT", "VAT", "SAT", "Muscle", "CH"), -->
+<!--     labels = c("IMAT", "VAT", "SAT", "SM", "CH") -->
+<!--   )+ -->
+<!--   labs(y="", x = "HR (95% CI)")+ -->
+<!--   theme(text = element_text(size = 15), -->
+<!--         axis.title.y = element_blank(), legend.position = "none") -->
+<!-- # forest_prop_surv_fig -->
 
-forest_ind_surv <-
-  tbl_all_ind_surv %>%
-  as_tibble() %>% 
-  `colnames<-`(str_remove_all(colnames(.), "\\*")) %>% 
-  filter(Characteristic %in% c("CH", "SMI", "SAT (index)",
-                               "VAT (index)",
-                               "IMAT (index)") ) %>% 
-  mutate(Characteristic = factor(Characteristic, 
-                                 levels = c("IMAT (index)",
-                                            "VAT (index)",
-                                            "SAT (index)",
-                                            "SMI", "CH"
-                                 ))) %>% 
-  separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>% 
-  
-  mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.))
+<!-- # ggsave("Figures/Figure 1D Forest plot MVA proportion full model20260407.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 6, -->
+<!-- #        height = 5, compression = "lzw" -->
+<!-- #        ) -->
 
-forest_ind_fig_surv <-
-  forest_ind_surv %>% 
-  ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-  geom_point() + 
-  geom_errorbarh(height=.1) +
-  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-  theme_classic()+
-  scale_x_log10()+
-    scale_y_discrete(
-    breaks = c("IMAT (index)", "VAT (index)", "SAT (index)", "SMI", "CH"),
-    labels = c(expression(IMAT[i]), expression(VAT[i]), expression(SAT[i]), "SMI", "CH")
-  )+
-  labs(y="", x = "HR (95% CI)")+
-  theme(text = element_text(size = 15),
-        axis.title.y = element_blank(), legend.position = "none")
-forest_ind_fig_surv
+<!-- forest_ind_surv <- -->
+<!--   tbl_all_ind_surv %>% -->
+<!--   as_tibble() %>%  -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "\\*")) %>%  -->
+<!--   filter(Characteristic %in% c("CH", "SMI", "SAT (index)", -->
+<!--                                "VAT (index)", -->
+<!--                                "IMAT (index)") ) %>%  -->
+<!--   mutate(Characteristic = factor(Characteristic,  -->
+<!--                                  levels = c("IMAT (index)", -->
+<!--                                             "VAT (index)", -->
+<!--                                             "SAT (index)", -->
+<!--                                             "SMI", "CH" -->
+<!--                                  ))) %>%  -->
+<!--   separate(`95% CI`, into = c("lower", "upper"), sep = ", ") %>%  -->
 
-# ggsave("Figures/Figure 1C Forest plot MVA indexed full model20260407.tiff",
-#        dpi = 600, units = "in",
-#        width = 6,
-#        height = 5, compression = "lzw"
-#        )
+<!--   mutate_at(c("HR", "lower", "upper"), ~ as.numeric(.)) -->
 
-# forest_surv_fullmva <- 
-#   forest_prop_surv %>%
-#   mutate(approach = "Proportion") %>% 
-#   bind_rows(., forest_ind_surv %>%
-#   mutate(approach = "Indexed")) %>% 
-#   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>% 
-#   mutate(Characteristic = factor(Characteristic, 
-#                                  levels = c("IMAT",
-#                                             "VAT",
-#                                             "SAT",
-#                                             "SMI", "CH"
-#                                  ))) %>% 
-#   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) +
-#   geom_point() + 
-#   geom_errorbarh(height=.1) +
-#   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
-#   theme_classic()+
-#   scale_x_log10()+
-#   labs(y="") %>% 
-#   theme(text = element_text(size = 15),
-#         axis.title.y = element_blank(), legend.position = "none")+
-#   facet_wrap(. ~ approach, axes = "all",
-#              # scales = "free_x",
-#              strip.position = "right")
-# forest_surv_fullmva
+<!-- forest_ind_fig_surv <- -->
+<!--   forest_ind_surv %>%  -->
+<!--   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) + -->
+<!--   geom_point() +  -->
+<!--   geom_errorbarh(height=.1) + -->
+<!--   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) + -->
+<!--   theme_classic()+ -->
+<!--   scale_x_log10()+ -->
+<!--     scale_y_discrete( -->
+<!--     breaks = c("IMAT (index)", "VAT (index)", "SAT (index)", "SMI", "CH"), -->
+<!--     labels = c(expression(IMAT[i]), expression(VAT[i]), expression(SAT[i]), "SMI", "CH") -->
+<!--   )+ -->
+<!--   labs(y="", x = "HR (95% CI)")+ -->
+<!--   theme(text = element_text(size = 15), -->
+<!--         axis.title.y = element_blank(), legend.position = "none") -->
+<!-- forest_ind_fig_surv -->
 
-# ggsave("Figures/Figure 1 C-D Forest plot MVA full model20260407.tiff",
-#        dpi = 600, units = "in",
-#        width = 6,
-#        height = 5, compression = "lzw"
-#        )
-```
+<!-- # ggsave("Figures/Figure 1C Forest plot MVA indexed full model20260407.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 6, -->
+<!-- #        height = 5, compression = "lzw" -->
+<!-- #        ) -->
 
-```{r patchwork HR forest}
-library(patchwork)
+<!-- # forest_surv_fullmva <-  -->
+<!-- #   forest_prop_surv %>% -->
+<!-- #   mutate(approach = "Proportion") %>%  -->
+<!-- #   bind_rows(., forest_ind_surv %>% -->
+<!-- #   mutate(approach = "Indexed")) %>%  -->
+<!-- #   mutate(Characteristic = str_remove_all(Characteristic, " proportion| \\(index\\)")) %>%  -->
+<!-- #   mutate(Characteristic = factor(Characteristic,  -->
+<!-- #                                  levels = c("IMAT", -->
+<!-- #                                             "VAT", -->
+<!-- #                                             "SAT", -->
+<!-- #                                             "SMI", "CH" -->
+<!-- #                                  ))) %>%  -->
+<!-- #   ggplot(aes(y=Characteristic, x=HR, xmin=lower, xmax=upper, color = Characteristic == "CH")) + -->
+<!-- #   geom_point() +  -->
+<!-- #   geom_errorbarh(height=.1) + -->
+<!-- #   geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) + -->
+<!-- #   theme_classic()+ -->
+<!-- #   scale_x_log10()+ -->
+<!-- #   labs(y="") %>%  -->
+<!-- #   theme(text = element_text(size = 15), -->
+<!-- #         axis.title.y = element_blank(), legend.position = "none")+ -->
+<!-- #   facet_wrap(. ~ approach, axes = "all", -->
+<!-- #              # scales = "free_x", -->
+<!-- #              strip.position = "right") -->
+<!-- # forest_surv_fullmva -->
 
-# forest_mva_ind_surv <- forest_mva_ind_surv +
-#   labs(subtitle = 'Indexed')
-# forest_mva_prop_surv <- forest_mva_prop_surv +
-#   labs(subtitle = 'Proportion')
+<!-- # ggsave("Figures/Figure 1 C-D Forest plot MVA full model20260407.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 6, -->
+<!-- #        height = 5, compression = "lzw" -->
+<!-- #        ) -->
+<!-- ``` -->
 
-(forest_mva_ind_surv_fig + forest_mva_prop_surv_fig) /
-  (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = 'A')+
-  plot_layout(heights = unit(c(2, 1), c('null', 'null')))
+<!-- ```{r patchwork HR forest} -->
+<!-- library(patchwork) -->
 
-# ggsave("Figures/Figure 1 Forest abcd plot20260721.tiff",
-#        dpi = 600, units = "in",
-#        width = 8,
-#        height = 6, compression = "lzw"
-#        )
+<!-- # forest_mva_ind_surv <- forest_mva_ind_surv + -->
+<!-- #   labs(subtitle = 'Indexed') -->
+<!-- # forest_mva_prop_surv <- forest_mva_prop_surv + -->
+<!-- #   labs(subtitle = 'Proportion') -->
 
-(forest_mva_ind_surv_fig + forest_mva_prop_surv_fig) /
-  (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = list(c("A", "", "B", "")))+
-  plot_layout(heights = unit(c(2, 1), c('null', 'null')))
+<!-- (forest_mva_ind_surv_fig + forest_mva_prop_surv_fig) / -->
+<!--   (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = 'A')+ -->
+<!--   plot_layout(heights = unit(c(2, 1), c('null', 'null'))) -->
 
-# ggsave("Figures/Figure 1 Forest ab plot20260721.tiff",
-#        dpi = 600, units = "in",
-#        width = 8,
-#        height = 6, compression = "lzw"
-#        )
-```
+<!-- # ggsave("Figures/Figure 1 Forest abcd plot20260721.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 8, -->
+<!-- #        height = 6, compression = "lzw" -->
+<!-- #        ) -->
+
+<!-- (forest_mva_ind_surv_fig + forest_mva_prop_surv_fig) / -->
+<!--   (forest_ind_fig_surv + forest_prop_surv_fig) + plot_annotation(tag_levels = list(c("A", "", "B", "")))+ -->
+<!--   plot_layout(heights = unit(c(2, 1), c('null', 'null'))) -->
+
+<!-- # ggsave("Figures/Figure 1 Forest ab plot20260721.tiff", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 8, -->
+<!-- #        height = 6, compression = "lzw" -->
+<!-- #        ) -->
+<!-- ``` -->
 <br>
 
 
