@@ -30,6 +30,7 @@ library(gtsummary)
 library(gt)
 library(survminer)
 library(survival)
+library(patchwork)
 theme_gtsummary_compact()
 theme_set(theme_classic())
 ```
@@ -77,7 +78,11 @@ drug_dat <-
 ```{r}
 lymphoma_data <- lymphoma_data %>% 
   mutate(race = factor(race, levels = c("White", "Other"))) %>% 
-  mutate(ethnicity_src_desc = na_if(ethnicity_src_desc, "UNKNOWN")) %>% 
+  mutate(ethnicity_src_desc = na_if(ethnicity_src_desc, "UNKNOWN")) |> 
+  mutate(ethnicity_src_desc = case_when(
+    is.na(ethnicity_src_desc)            ~ "SPANISH NOS",
+    TRUE                                 ~ ethnicity_src_desc
+  )) %>% 
   mutate(year_at_dx = year(dx_dt)) %>% 
   mutate(year_at_dx_cat = case_when(
     year_at_dx >= 2011 &
@@ -393,13 +398,13 @@ lymphoma_data %>%
          race, race_cr_src_desc_1, 
          ethnicity_src_desc,
          stage,
-         histology_desc, 
-         regimen_cat,
+         # histology_desc, 
+         # regimen_cat,
          `survival time (months, Registry)` = survival_time_in_months,
          os_time_from_treatment_months, os_event,
          pfs_event,
          bmi, bmi_cat, #bsa_du_bois, bsa_cat,
-         weight_kg, height_m,
+         # weight_kg, height_m,
          ch_status
          ) %>%
   tbl_summary(by = ch_status,
@@ -535,7 +540,7 @@ tbl_raw <- lymphoma_data %>%
 
 tbl_index <- lymphoma_data %>%
   select(smi, 
-         vat_cm2_index, sat_cm2_index, imat_cm2_index, tat_cm2_index, 
+         vat_cm2_index, sat_cm2_index, imat_cm2_index, #tat_cm2_index, 
          ch_status
          ) %>%
   tbl_summary(by = ch_status,
@@ -725,29 +730,29 @@ glm(ch_status ~
   modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 
-BMI overweight and obese combined together
-```{r}
-lymphoma_data <- lymphoma_data %>% 
-  mutate(bmi_cat_grouped = case_when(
-    bmi_cat == "<25"                ~ "<25",
-    !is.na(bmi_cat)                 ~ "≥25"
-  ), bmi_cat_grouped = factor(bmi_cat_grouped, levels = c("<25", "≥25")))
+<!-- BMI overweight and obese combined together -->
+<!-- ```{r} -->
+<!-- lymphoma_data <- lymphoma_data %>%  -->
+<!--   mutate(bmi_cat_grouped = case_when( -->
+<!--     bmi_cat == "<25"                ~ "<25", -->
+<!--     !is.na(bmi_cat)                 ~ "≥25" -->
+<!--   ), bmi_cat_grouped = factor(bmi_cat_grouped, levels = c("<25", "≥25"))) -->
 
-glm(ch_status ~
-      age_at_diagnosis_num + sex + stage + bmi_cat_grouped,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
-glm(ch_status ~
-      bmi_cat_grouped,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
-```
+<!-- glm(ch_status ~ -->
+<!--       age_at_diagnosis_num + sex + stage + bmi_cat_grouped, -->
+<!--     family = "binomial", -->
+<!--     data = lymphoma_data) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for CH status") -->
+<!-- glm(ch_status ~ -->
+<!--       bmi_cat_grouped, -->
+<!--     family = "binomial", -->
+<!--     data = lymphoma_data) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for CH status") -->
+<!-- ``` -->
 
 
 ### b. Association with height-indexed body composition features
@@ -947,30 +952,30 @@ glm(ch_status ~
   tbl_regression(exponentiate = TRUE
                  ) %>%
   modify_spanning_header(everything() ~ "Regression for CH status")
-glm(ch_status ~
-      age_at_diagnosis_num + sex + stage +
-          tat_cm2_index_sdhr,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
-glm(ch_status ~
-      age_at_diagnosis_num + sex + stage +
-          v_s_ratio,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
-glm(ch_status ~
-      age_at_diagnosis_num + sex + stage +
-          visceral_obesity,
-    family = "binomial",
-    data = lymphoma_data) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for CH status")
+# glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           tat_cm2_index_sdhr,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE
+#                  ) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
+# glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           v_s_ratio,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE
+#                  ) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
+# glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           visceral_obesity,
+#     family = "binomial",
+#     data = lymphoma_data) %>%
+#   tbl_regression(exponentiate = TRUE
+#                  ) %>%
+#   modify_spanning_header(everything() ~ "Regression for CH status")
 ```
 <br>
 
@@ -1589,7 +1594,7 @@ gt_tbl
 ```
 
 
-#### MVA - Table 2
+#### MVA - Table S5
 ```{r}
 tbl_dnmt3a_muscle_prop_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
@@ -1966,24 +1971,18 @@ glm(mutation_gene_TET2 ~
 
 
 
-## 3. Regression for association with CH variants mutations
-### Count table - Ns are too snmall to do further regression
-```{r}
-lymphoma_data %>%
-  select(starts_with("mutation_variant")) %>%
-  `colnames<-`(str_remove_all(colnames(.), "mutation_variant_")) %>% 
-  tbl_summary() %>%
-  bold_labels() %>% 
-  modify_header(label ~ "**CH mutations**",
-                all_stat_cols() ~ "**{level}**, N = {n}")
-```
-
-<!-- # V. Sensitivity analysis restricted to White patient (to follow when we decide which model to move forward) -->
+<!-- ## 3. Regression for association with CH variants mutations -->
+<!-- ### Count table - Ns are too snmall to do further regression -->
 <!-- ```{r} -->
-<!-- restric_white_patient <- lymphoma_data %>%  -->
-<!--   filter(race == "White") -->
+<!-- lymphoma_data %>% -->
+<!--   select(starts_with("mutation_variant")) %>% -->
+<!--   `colnames<-`(str_remove_all(colnames(.), "mutation_variant_")) %>%  -->
+<!--   tbl_summary() %>% -->
+<!--   bold_labels() %>%  -->
+<!--   modify_header(label ~ "**CH mutations**", -->
+<!--                 all_stat_cols() ~ "**{level}**, N = {n}") -->
 <!-- ``` -->
-<br>
+<!-- <br> -->
 
 ## 4. Regression for association with CH VAF - Not used yet
 Select the highest VAF for continuous analysis (log2) or categorize raw VAF as ≥ 0.10 (coded 1) or < 0.10 (coded 0) for binary analysis.
@@ -1992,7 +1991,7 @@ vaf_reg_dat <- ch_mutation %>%
   filter(!is.na(vaf)) %>%
   select(mrn, vaf) %>% 
   arrange(mrn, desc(vaf)) %>% 
-  distinct(mrn, .keep_all = TRUE) |> 
+  # distinct(mrn, .keep_all = TRUE) |> 
   mutate(log2_vaf = log2(vaf)) %>% 
   mutate(vaf_cat = case_when(
     vaf >= 0.10           ~ 1,
@@ -2005,28 +2004,39 @@ vaf_reg_dat <- ch_mutation %>%
 ```
 
 ```{r}
-vaf_reg_dat |> 
+vaf_sa_fig <- 
+  vaf_reg_dat |> 
   select(vaf, log2_vaf, bmi, bmi_cat) |> 
   ggplot(aes(x = bmi, y = log2_vaf))+
   geom_point()+
   xlim(15, 50)+
+  labs(x = "BMI (kg/m²)", y = "VAF (log2)")+
   geom_smooth(method = "lm", se = FALSE, color = "black") +
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))#, 
-           # label.x = 4.5, label.y = 30
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), 
+           # label.x = 4.5#, 
+           label.y = -2.5
            )
+vaf_sa_fig
+# ggsave("Figures/Figure Sa VAF_20260803.tiff",
+#        dpi = 600, units = "in",
+#        width = 5,
+#        height = 5, compression = "lzw"
+#        )
 
-vaf_reg_dat |> 
+vaf_sb_fig <- 
+  vaf_reg_dat |> 
   select(vaf, log2_vaf, bmi, bmi_cat) |> 
   ggplot(aes(x = bmi_cat, y = log2_vaf, color = bmi_cat))+
   geom_boxplot()+
   geom_jitter(color = "grey")+
+  labs(y = "VAF (log2)")+
   scale_color_viridis_d(option = "G", end = c(0.6),
                         limits = c("<25",
                                    "≥25 - <30",
-                                   "≥30"))+
-  coord_flip()+
+                                   "≥30"), name = "BMI (kg/m²)")+
+  # coord_flip()+
   theme(#axis.text.y = element_blank(),
-        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
         #axis.ticks.y = element_blank(),
         legend.position = "bottom")+
   stat_compare_means(comparisons = list(
@@ -2035,14 +2045,43 @@ vaf_reg_dat |>
     c("≥25 - <30", "≥30")
   ),
   method = "wilcox.test", label = "p.format" )
+vaf_sb_fig
+# ggsave("Figures/Figure Sb VAF_20260803.tiff",
+#        dpi = 600, units = "in",
+#        width = 5,
+#        height = 5, compression = "lzw"
+#        )
 
 
+# vaf_sa_fig /
+#   vaf_sb_fig + plot_annotation(tag_levels = 'A')
+# ggsave("Figures/Figure_combined Sab VAF_20260803.tiff",
+#        dpi = 600, units = "in",
+#        width = 5,
+#        height = 8, compression = "lzw"
+#        )
 ```
 
 
 ### A. Continuous LOG2 VAF
+```{r}
+vaf_reg_dat <- ch_mutation %>% 
+  filter(!is.na(vaf)) %>%
+  select(mrn, vaf) %>% 
+  arrange(mrn, desc(vaf)) %>% 
+  distinct(mrn, .keep_all = TRUE) |>
+  mutate(log2_vaf = log2(vaf)) %>% 
+  mutate(vaf_cat = case_when(
+    vaf >= 0.10           ~ 1,
+    vaf < 0.10            ~ 0
+  )) %>% 
+  full_join(lymphoma_data, 
+            ., 
+            by = "mrn") %>% 
+  filter(!is.na(vaf))
+```
 
-#### a. BMI
+#### a. BMI -Table S6
 ```{r}
 glm(log2_vaf ~
       age_at_diagnosis_num + sex + stage + bmi,
@@ -2076,7 +2115,7 @@ glm(log2_vaf ~
 
 
 #### b. Association with height-indexed body composition features
-#### UVA
+#### UVA -Table S6
 ```{r}
 tbl_vaf_muscle_ind_uva <- 
   glm(log2_vaf ~
@@ -2116,7 +2155,7 @@ tbl_vaf_imat_ind_uva <-
 tbl_vaf_imat_ind_uva
 ```
 
-#### MVA
+#### MVA -Table S6
 ```{r}
 tbl_vaf_muscle_ind_mva <- 
   glm(log2_vaf ~
@@ -3459,7 +3498,7 @@ glm(vaf_cat ~
 ## Univariable regression analysis
 Association estimates are reported per 1-SD increase in the body composition metric.
 
-## Univariable - Table S6 (just first section of big table - UVA for BMI)
+## Univariable - Table S7 (just first section of big table - UVA for BMI)
 ```{r HR uva cox clinical}
 tbl_main_surv <- tbl_uvregression(
   lymphoma_data,
@@ -3584,7 +3623,7 @@ gt_tbl
 
 
 ## Multivariable
-## MVA BMI - Table S6
+## MVA BMI - Table S7
 ```{r HR mva bmi}
 coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
@@ -3670,7 +3709,7 @@ tbl_merge(list(tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
 ```
 <br>
 
-Table S7 (OS)
+Table S8 (OS)
 ```{r}
 tbl_muscle_prop_surv <-
   coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
@@ -4018,27 +4057,27 @@ tbl_merge(list(tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
 
 ### Other
 ```{r}
-coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + tat_cm2_index_sdhr,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
-coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + v_s_ratio,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
-coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
-             event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + visceral_obesity,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+#              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + tat_cm2_index_sdhr,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+#              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + v_s_ratio,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+#              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + visceral_obesity,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
 
 coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
              event = lymphoma_data$os_event) ~ age_at_diagnosis_num +
@@ -4113,26 +4152,26 @@ coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
 
 <!-- ``` -->
 
-## KM by CH
-```{r KM OS by CH}
-ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
-                   data = lymphoma_data),
-           # title = "PFS Analysis",
-           font.main = c(20, "bold", "black"),
-           font.x = c(18, "bold", "black"),
-           font.y = c(18, "bold", "black"),
-           font.legend = c(16, "black"),
-           font.tickslab = c(16, "bold", "black"),
-           size = 1.5,
+<!-- ## KM by CH -->
+<!-- ```{r KM OS by CH} -->
+<!-- ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status, -->
+<!--                    data = lymphoma_data), -->
+<!--            # title = "PFS Analysis", -->
+<!--            font.main = c(20, "bold", "black"), -->
+<!--            font.x = c(18, "bold", "black"), -->
+<!--            font.y = c(18, "bold", "black"), -->
+<!--            font.legend = c(16, "black"), -->
+<!--            font.tickslab = c(16, "bold", "black"), -->
+<!--            size = 1.5, -->
 
-           xlab = "Time (months)",
-           legend = "top",
-           pval = TRUE,
-           conf.int = FALSE,
-           # Censor
-           censor = TRUE
-) %++% guides(colour = guide_legend(ncol = 1))
-```
+<!--            xlab = "Time (months)", -->
+<!--            legend = "top", -->
+<!--            pval = TRUE, -->
+<!--            conf.int = FALSE, -->
+<!--            # Censor -->
+<!--            censor = TRUE -->
+<!-- ) %++% guides(colour = guide_legend(ncol = 1)) -->
+<!-- ``` -->
 
 # VII. Survival - PFS
 ## Univariable regression analysis
@@ -4292,7 +4331,7 @@ tbl_merge(list(tbl_muscle_ind_surv, tbl_sat_ind_surv, tbl_vat_ind_surv,
 ```
 <br>
 
-Table S7 (PFS)
+Table S8 (PFS)
 ```{r mva bc prop table pfs}
 # tbl_1_surv <-
 #   coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
@@ -4365,27 +4404,27 @@ tbl_merge(list(tbl_muscle_prop_surv, tbl_sat_prop_surv, tbl_vat_prop_surv,
 
 ### Other
 ```{r other mva pfs}
-coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
-             event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + tat_cm2_index_sdhr,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
-coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
-             event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + v_s_ratio,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
-coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
-             event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
-          sex + stage + ch_status + visceral_obesity,
-        data = lymphoma_data)  %>%
-  tbl_regression(exponentiate = TRUE) %>%
-  bold_p(t = .05) %>%
-  add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+#              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + tat_cm2_index_sdhr,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+#              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + v_s_ratio,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
+# coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+#              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
+#           sex + stage + ch_status + visceral_obesity,
+#         data = lymphoma_data)  %>%
+#   tbl_regression(exponentiate = TRUE) %>%
+#   bold_p(t = .05) %>%
+#   add_nevent(location = "level") %>% add_n(location = "level")
 
 coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
              event = lymphoma_data$pfs_event) ~ age_at_diagnosis_num +
@@ -4412,26 +4451,26 @@ coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
 
 
 
-## KM by CH
-```{r KM PFS by CH pfs}
-ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ch_status,
-                   data = lymphoma_data),
-           title = "PFS Analysis",
-           font.main = c(20, "bold", "black"),
-           font.x = c(18, "bold", "black"),
-           font.y = c(18, "bold", "black"),
-           font.legend = c(16, "black"),
-           font.tickslab = c(16, "bold", "black"),
-           size = 1.5,
+<!-- ## KM by CH -->
+<!-- ```{r KM PFS by CH pfs} -->
+<!-- ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ch_status, -->
+<!--                    data = lymphoma_data), -->
+<!--            title = "PFS Analysis", -->
+<!--            font.main = c(20, "bold", "black"), -->
+<!--            font.x = c(18, "bold", "black"), -->
+<!--            font.y = c(18, "bold", "black"), -->
+<!--            font.legend = c(16, "black"), -->
+<!--            font.tickslab = c(16, "bold", "black"), -->
+<!--            size = 1.5, -->
 
-           xlab = "Time (months)",
-           legend = "top",
-           pval = TRUE,
-           conf.int = FALSE,
-           # Censor
-           censor = TRUE
-) %++% guides(colour = guide_legend(ncol = 1))
-```
+<!--            xlab = "Time (months)", -->
+<!--            legend = "top", -->
+<!--            pval = TRUE, -->
+<!--            conf.int = FALSE, -->
+<!--            # Censor -->
+<!--            censor = TRUE -->
+<!-- ) %++% guides(colour = guide_legend(ncol = 1)) -->
+<!-- ``` -->
 
 
 
