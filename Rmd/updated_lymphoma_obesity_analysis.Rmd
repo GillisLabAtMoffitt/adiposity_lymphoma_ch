@@ -381,12 +381,12 @@ var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
 # I. Patient characteristic by CH status - Table 1
 ```{r Patient characteristics}
 lymphoma_data %>%
-  select(ch_status) %>%
-  tbl_summary() %>%
-  bold_labels()
-lymphoma_data %>%
-  select(time_sample_first_treatment) %>%
-  tbl_summary(statistic = list(everything() ~ 
+  select(ch_status,
+         time_sample_first_treatment,
+         `survival time (months, Registry)` = survival_time_in_months,
+         os_time_from_treatment_months, os_event,
+         pfs_event) %>%
+  tbl_summary(statistic = list(all_continuous() ~ 
                                  "{median} [{min}-{max}] ({p25}, {p75})"),
               digits = list(all_continuous() ~ 1)) %>%
   bold_labels()
@@ -395,22 +395,14 @@ lymphoma_data %>%
   select(age_at_diagnosis_num, 
          year_at_dx_cat,
          sex, 
-         race, race_cr_src_desc_1, 
+         race, 
          ethnicity_src_desc,
          stage,
-         # histology_desc, 
-         # regimen_cat,
-         `survival time (months, Registry)` = survival_time_in_months,
-         os_time_from_treatment_months, os_event,
-         pfs_event,
          bmi, bmi_cat, #bsa_du_bois, bsa_cat,
          # weight_kg, height_m,
          ch_status
          ) %>%
   tbl_summary(by = ch_status,
-              # type = list(year_at_dx ~ "categorical"),
-              statistic = list(c(age_at_diagnosis_num, os_time_from_treatment_months) ~ 
-                                 "{median} [{min}-{max}] ({p25}, {p75})"),
               digits = list(all_continuous() ~ 1)) %>%
   bold_labels() %>%
   add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
@@ -608,87 +600,87 @@ gt_tbl <- tbl_stack(list(tbl_index, tbl_prop, tbl_raw),
 gt_tbl
 ```
 
-I plotted the original features by CH status. Will update once we figure out the best features to show. Figure 3
-```{r Body composition plot by CH, fig.height=4}
-# facet_names <- as_labeller(c(
-#   "SMI" = "SMI",
-#   "VATI" = "VAT[i]", "SATI" = "SAT[i]", "IMATI" = "IMAT[i]"), 
-#   default = label_parsed
-# )
-boxplot_index <- lymphoma_data %>% 
-  select(mrn,
-         smi, imat_cm2_index, vat_cm2_index, sat_cm2_index, 
-         # muscle_hu,
-         bmi_cat,
-         ch_status
-         ) %>%
-  pivot_longer(-c(mrn, bmi_cat, ch_status)) %>% 
-  mutate(name = case_when(
-    name == "smi"                         ~ "SMI",
-    name == "vat_cm2_index"               ~ "VATI",
-    name == "sat_cm2_index"               ~ "SATI",
-    name == "imat_cm2_index"              ~ "IMATI"
-  )) %>%
-  mutate(name = factor(name,
-                       levels = c("SMI", "VATI", "SATI", "IMATI")#,
-                       # labels = c("'Group A'*^1", "'Group B'*^2", "SATI", "IMATI")
-                       )) %>%
-  ggplot(aes(x= ch_status, y= value, color = ch_status))+
-  geom_boxplot()+
-  labs(x = NULL, y = "Body composition values")+
-  scale_color_viridis_d(option = "G", end = c(0.8))+
-  theme_classic()+
-  coord_flip()+
-  # facet_grid(cols = vars(name), scales = "free")
-  facet_wrap(.~ name, scales = "free", nrow = 1)+
-  theme(legend.position = "none")
+<!-- I plotted the original features by CH status. Will update once we figure out the best features to show. Figure 3 -->
+<!-- ```{r Body composition plot by CH, fig.height=4} -->
+<!-- # facet_names <- as_labeller(c( -->
+<!-- #   "SMI" = "SMI", -->
+<!-- #   "VATI" = "VAT[i]", "SATI" = "SAT[i]", "IMATI" = "IMAT[i]"),  -->
+<!-- #   default = label_parsed -->
+<!-- # ) -->
+<!-- boxplot_index <- lymphoma_data %>%  -->
+<!--   select(mrn, -->
+<!--          smi, imat_cm2_index, vat_cm2_index, sat_cm2_index,  -->
+<!--          # muscle_hu, -->
+<!--          bmi_cat, -->
+<!--          ch_status -->
+<!--          ) %>% -->
+<!--   pivot_longer(-c(mrn, bmi_cat, ch_status)) %>%  -->
+<!--   mutate(name = case_when( -->
+<!--     name == "smi"                         ~ "SMI", -->
+<!--     name == "vat_cm2_index"               ~ "VATI", -->
+<!--     name == "sat_cm2_index"               ~ "SATI", -->
+<!--     name == "imat_cm2_index"              ~ "IMATI" -->
+<!--   )) %>% -->
+<!--   mutate(name = factor(name, -->
+<!--                        levels = c("SMI", "VATI", "SATI", "IMATI")#, -->
+<!--                        # labels = c("'Group A'*^1", "'Group B'*^2", "SATI", "IMATI") -->
+<!--                        )) %>% -->
+<!--   ggplot(aes(x= ch_status, y= value, color = ch_status))+ -->
+<!--   geom_boxplot()+ -->
+<!--   labs(x = NULL, y = "Body composition values")+ -->
+<!--   scale_color_viridis_d(option = "G", end = c(0.8))+ -->
+<!--   theme_classic()+ -->
+<!--   coord_flip()+ -->
+<!--   # facet_grid(cols = vars(name), scales = "free") -->
+<!--   facet_wrap(.~ name, scales = "free", nrow = 1)+ -->
+<!--   theme(legend.position = "none") -->
 
-boxplot_prop <- lymphoma_data %>% 
-  select(mrn,
-         ends_with("_proportion"),
-         # muscle_hu,
-         bmi_cat,
-         ch_status
-         ) %>%
-  pivot_longer(-c(mrn, bmi_cat, ch_status)) %>% 
-  mutate(name = case_when(
-    name == "muscle_hu"                    ~ "Muscle density (HU)", 
-    name == "muscle_proportion"            ~ "Muscle proportion",
-    name == "vat_proportion"               ~ "VAT proportion", 
-    name == "sat_proportion"               ~ "SAT proportion", 
-    name == "imat_proportion"              ~ "IMAT proportion"
-  )) %>% 
-  mutate(name = factor(name, levels = c("Muscle density (HU)", "Muscle proportion",
-                                        "VAT proportion", "SAT proportion", 
-                                        "IMAT proportion"))) %>%
-  ggplot(aes(x= ch_status, y= value, color = ch_status))+
-  geom_boxplot()+
-  labs(x = NULL, y = "Body composition values")+
-  scale_color_viridis_d(option = "G", end = c(0.8))+
-  theme_classic()+
-  coord_flip()+
-  # facet_grid(cols = vars(name), scales = "free")
-  facet_wrap(.~ name, scales = "free", nrow = 1)+
-  theme(legend.position = "none")
+<!-- boxplot_prop <- lymphoma_data %>%  -->
+<!--   select(mrn, -->
+<!--          ends_with("_proportion"), -->
+<!--          # muscle_hu, -->
+<!--          bmi_cat, -->
+<!--          ch_status -->
+<!--          ) %>% -->
+<!--   pivot_longer(-c(mrn, bmi_cat, ch_status)) %>%  -->
+<!--   mutate(name = case_when( -->
+<!--     name == "muscle_hu"                    ~ "Muscle density (HU)",  -->
+<!--     name == "muscle_proportion"            ~ "Muscle proportion", -->
+<!--     name == "vat_proportion"               ~ "VAT proportion",  -->
+<!--     name == "sat_proportion"               ~ "SAT proportion",  -->
+<!--     name == "imat_proportion"              ~ "IMAT proportion" -->
+<!--   )) %>%  -->
+<!--   mutate(name = factor(name, levels = c("Muscle density (HU)", "Muscle proportion", -->
+<!--                                         "VAT proportion", "SAT proportion",  -->
+<!--                                         "IMAT proportion"))) %>% -->
+<!--   ggplot(aes(x= ch_status, y= value, color = ch_status))+ -->
+<!--   geom_boxplot()+ -->
+<!--   labs(x = NULL, y = "Body composition values")+ -->
+<!--   scale_color_viridis_d(option = "G", end = c(0.8))+ -->
+<!--   theme_classic()+ -->
+<!--   coord_flip()+ -->
+<!--   # facet_grid(cols = vars(name), scales = "free") -->
+<!--   facet_wrap(.~ name, scales = "free", nrow = 1)+ -->
+<!--   theme(legend.position = "none") -->
 
-boxplot_index <- boxplot_index +
-  labs(subtitle = 'Height-Indexed')
-boxplot_prop <- boxplot_prop +
-  labs(subtitle = 'Proportion')
+<!-- boxplot_index <- boxplot_index + -->
+<!--   labs(subtitle = 'Height-Indexed') -->
+<!-- boxplot_prop <- boxplot_prop + -->
+<!--   labs(subtitle = 'Proportion') -->
 
-library(patchwork)
-boxplot_index /
-  boxplot_prop +
-  plot_layout(axes = "collect")
+<!-- library(patchwork) -->
+<!-- boxplot_index / -->
+<!--   boxplot_prop + -->
+<!--   plot_layout(axes = "collect") -->
 
 
 
-# ggsave("Figures/Figure S2 Distribution of body composition features by CH status_20260720.jpeg",
-#        dpi = 600, units = "in",
-#        width = 10,
-#        height = 4
-#        )
-```
+<!-- # ggsave("Figures/Figure S2 Distribution of body composition features by CH status_20260720.jpeg", -->
+<!-- #        dpi = 600, units = "in", -->
+<!-- #        width = 10, -->
+<!-- #        height = 4 -->
+<!-- #        ) -->
+<!-- ``` -->
 
 
 # IV. CH and Body composition - glm logistic regression
@@ -980,7 +972,7 @@ glm(ch_status ~
 <br>
 
 ## 2. Regression for association with CH gene mutations
-### a. Count table and VAF - Removed from Tables
+### a. Count table and VAF - Text values
 ```{r}
 lymphoma_data %>%
   select(number_of_mutation_per_patient, starts_with("mutation_gene")) %>%
@@ -990,16 +982,16 @@ lymphoma_data %>%
   modify_header(label ~ "**CH mutations**",
                 all_stat_cols() ~ "**{level}**, N = {n}")
 
-lymphoma_data %>%
-  filter(!is.na(number_of_mutation_per_patient)) |> 
-  select(number_of_mutation_per_patient, bmi, bmi_cat) |> 
-  ggplot(aes(x = as.factor(number_of_mutation_per_patient), y = bmi, 
-             color = as.factor(number_of_mutation_per_patient)))+
-  geom_boxplot(outlier.shape = NA)+
-  geom_jitter(color = "grey")+
-  labs(x = "Number of CH mutations per patient")+
-  scale_color_viridis_d(option = "A", end = c(0.6))+
-  theme(legend.position = "none")
+# lymphoma_data %>%
+#   filter(!is.na(number_of_mutation_per_patient)) |> 
+#   select(number_of_mutation_per_patient, bmi, bmi_cat) |> 
+#   ggplot(aes(x = as.factor(number_of_mutation_per_patient), y = bmi, 
+#              color = as.factor(number_of_mutation_per_patient)))+
+#   geom_boxplot(outlier.shape = NA)+
+#   geom_jitter(color = "grey")+
+#   labs(x = "Number of CH mutations per patient")+
+#   scale_color_viridis_d(option = "A", end = c(0.6))+
+#   theme(legend.position = "none")
          
 ch_mutation %>% 
   select(vaf, depth) %>% 
@@ -1469,7 +1461,7 @@ forest_mva_ind_fig <-
              # scales = "free_x", 
              axes = "margins",
              strip.position = "top", labeller = facet_names)
-forest_mva_ind_fig
+# forest_mva_ind_fig
 # ggsave("Figures/Figure 2A Forest plot MVA ind OR model_20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 10,
@@ -1852,7 +1844,7 @@ forest_mva_prop_fig <-
              # scales = "free_x", 
              axes = "margins",
              strip.position = "top", labeller = facet_names)
-forest_mva_prop_fig
+# forest_mva_prop_fig
 # ggsave("Figures/Figure 2B Forest plot MVA prop OR model_20260721.tiff",
 #        dpi = 600, units = "in",
 #        width = 10,
@@ -1869,9 +1861,9 @@ library(patchwork)
 # forest_mva_prop <- forest_mva_prop# +
 #   # labs(subtitle = 'Proportion')
 
-forest_mva_ind_fig /
-  forest_mva_prop_fig + plot_annotation(tag_levels = 'A')+
-  plot_layout(axis_titles = "collect")
+# forest_mva_ind_fig /
+#   forest_mva_prop_fig + plot_annotation(tag_levels = 'A')+
+#   plot_layout(axis_titles = "collect")
 
 # ggsave("Figures/Figure 2 Forest plot MVA OR model_20260721.tiff",
 #        dpi = 600, units = "in",
@@ -1984,7 +1976,7 @@ glm(mutation_gene_TET2 ~
 <!-- ``` -->
 <!-- <br> -->
 
-## 4. Regression for association with CH VAF - Not used yet
+## 4. Regression for association with CH VAF
 Select the highest VAF for continuous analysis (log2) or categorize raw VAF as ≥ 0.10 (coded 1) or < 0.10 (coded 0) for binary analysis.
 ```{r}
 vaf_reg_dat <- ch_mutation %>% 
@@ -2016,46 +2008,51 @@ vaf_sa_fig <-
            # label.x = 4.5#, 
            label.y = -2.5
            )
-vaf_sa_fig
+# vaf_sa_fig
 # ggsave("Figures/Figure Sa VAF_20260803.tiff",
 #        dpi = 600, units = "in",
 #        width = 5,
 #        height = 5, compression = "lzw"
 #        )
 
-vaf_sb_fig <- 
+vaf_sb_fig <-
   vaf_reg_dat |> 
   select(vaf, log2_vaf, bmi, bmi_cat) |> 
+  mutate(bmi_cat = case_when(
+    bmi_cat == "<25"                    ~ "Under-normal weight",
+    bmi_cat == "≥25 - <30"              ~ "Overweight",
+    bmi_cat == "≥30"                    ~ "Obese"
+  ), bmi_cat = factor(bmi_cat, levels = c("Under-normal weight", "Overweight", "Obese"))) |> 
   ggplot(aes(x = bmi_cat, y = log2_vaf, color = bmi_cat))+
   geom_boxplot()+
   geom_jitter(color = "grey")+
   labs(y = "VAF (log2)")+
   scale_color_viridis_d(option = "G", end = c(0.6),
-                        limits = c("<25",
-                                   "≥25 - <30",
-                                   "≥30"), name = "BMI (kg/m²)")+
+                        limits = c("Under-normal weight",
+                                   "Overweight",
+                                   "Obese"), name = "BMI (kg/m²)")+
   # coord_flip()+
   theme(#axis.text.y = element_blank(),
         axis.title.x = element_blank(),
         #axis.ticks.y = element_blank(),
-        legend.position = "bottom")+
+        legend.position = "none")+
   stat_compare_means(comparisons = list(
-    c("<25", "≥25 - <30"),
-    c("<25", "≥30"),
-    c("≥25 - <30", "≥30")
+    c("Under-normal weight", "Overweight"),
+    c("Under-normal weight", "Obese"),
+    c("Overweight", "Obese")
   ),
   method = "wilcox.test", label = "p.format" )
-vaf_sb_fig
-# ggsave("Figures/Figure Sb VAF_20260803.tiff",
+# vaf_sb_fig
+# ggsave("Figures/Figure Sb VAF_20260810.tiff",
 #        dpi = 600, units = "in",
 #        width = 5,
 #        height = 5, compression = "lzw"
 #        )
 
 
-# vaf_sa_fig /
-#   vaf_sb_fig + plot_annotation(tag_levels = 'A')
-# ggsave("Figures/Figure_combined Sab VAF_20260803.tiff",
+vaf_sa_fig /
+  vaf_sb_fig + plot_annotation(tag_levels = 'A')
+# ggsave("Figures/Figure_combined Sab VAF_20260810.tiff",
 #        dpi = 600, units = "in",
 #        width = 5,
 #        height = 8, compression = "lzw"
@@ -2315,239 +2312,239 @@ glm(log2_vaf ~
 ```
 
 
-### B. Continuous RAW VAF
-#### a. BMI
-```{r}
-glm(vaf ~
-      age_at_diagnosis_num + sex + stage + bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex + stage + bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-```
+<!-- ### B. Continuous RAW VAF -->
+<!-- #### a. BMI -->
+<!-- ```{r} -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + stage + bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + stage + bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- ``` -->
 
 
-#### b. Association with height-indexed body composition features
-#### UVA
-```{r}
-tbl_vaf_muscle_ind_uva <- 
-  glm(vaf ~
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_ind_uva
-tbl_vaf_vat_ind_uva <- 
-  glm(vaf ~
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_ind_uva
-tbl_vaf_sat_ind_uva <- 
-  glm(vaf ~
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_ind_uva
-tbl_vaf_imat_ind_uva <- 
-  glm(vaf ~
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_ind_uva
-```
+<!-- #### b. Association with height-indexed body composition features -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_ind_uva -->
+<!-- tbl_vaf_vat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_ind_uva -->
+<!-- tbl_vaf_sat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_ind_uva -->
+<!-- tbl_vaf_imat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_ind_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_ind_mva
-tbl_vaf_vat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_ind_mva
-tbl_vaf_sat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_ind_mva
-tbl_vaf_imat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_ind_mva
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_ind_mva -->
+<!-- tbl_vaf_vat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_ind_mva -->
+<!-- tbl_vaf_sat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_ind_mva -->
+<!-- tbl_vaf_imat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_ind_mva -->
+<!-- ``` -->
 
 
-#### c. Association with body composition proportion
-#### UVA
-```{r}
-tbl_vaf_muscle_prop_uva <- 
-  glm(vaf ~
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_prop_uva
-tbl_vaf_vat_prop_uva <- 
-  glm(vaf ~
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_prop_uva
-tbl_vaf_sat_prop_uva <- 
-  glm(vaf ~
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_prop_uva
-tbl_vaf_imat_prop_uva <- 
-  glm(vaf ~
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_prop_uva
-```
+<!-- #### c. Association with body composition proportion -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_prop_uva -->
+<!-- tbl_vaf_vat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_prop_uva -->
+<!-- tbl_vaf_sat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_prop_uva -->
+<!-- tbl_vaf_imat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_prop_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_prop_mva
-tbl_vaf_vat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_prop_mva
-tbl_vaf_sat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_prop_mva
-tbl_vaf_imat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex + stage +
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_prop_mva
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_prop_mva -->
+<!-- tbl_vaf_vat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_prop_mva -->
+<!-- tbl_vaf_sat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_prop_mva -->
+<!-- tbl_vaf_imat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + stage + -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_prop_mva -->
+<!-- ``` -->
 
-#### d. Association with others
-```{r}
-glm(vaf ~
-      age_at_diagnosis_num + sex + stage +
-      muscle_hu_sdhr,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex + stage +
-      myosteatosis,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex + stage +
-      sarcopenia,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
+<!-- #### d. Association with others -->
+<!-- ```{r} -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + stage + -->
+<!--       muscle_hu_sdhr, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + stage + -->
+<!--       myosteatosis, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + stage + -->
+<!--       sarcopenia, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
 
-```
+<!-- ``` -->
 
 
 
@@ -2790,708 +2787,708 @@ glm(vaf_cat ~
 ```
 <br>
 
-### A1. Continuous LOG2 VAF - stage
-#### a. BMI
-```{r}
-glm(log2_vaf ~
-      age_at_diagnosis_num + sex + bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-glm(log2_vaf ~
-      bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-glm(log2_vaf ~
-      age_at_diagnosis_num + sex + bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-glm(log2_vaf ~
-      bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-```
+<!-- ### A1. Continuous LOG2 VAF - stage -->
+<!-- #### a. BMI -->
+<!-- ```{r} -->
+<!-- glm(log2_vaf ~ -->
+<!--       age_at_diagnosis_num + sex + bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- glm(log2_vaf ~ -->
+<!--       bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- glm(log2_vaf ~ -->
+<!--       age_at_diagnosis_num + sex + bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- glm(log2_vaf ~ -->
+<!--       bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- ``` -->
 
 
-#### b. Association with height-indexed body composition features
-#### UVA
-```{r}
-tbl_vaf_muscle_ind_uva <- 
-  glm(log2_vaf ~
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_muscle_ind_uva
-tbl_vaf_vat_ind_uva <- 
-  glm(log2_vaf ~
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_vat_ind_uva
-tbl_vaf_sat_ind_uva <- 
-  glm(log2_vaf ~
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_sat_ind_uva
-tbl_vaf_imat_ind_uva <- 
-  glm(log2_vaf ~
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_imat_ind_uva
-```
+<!-- #### b. Association with height-indexed body composition features -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_muscle_ind_uva -->
+<!-- tbl_vaf_vat_ind_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_vat_ind_uva -->
+<!-- tbl_vaf_sat_ind_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_sat_ind_uva -->
+<!-- tbl_vaf_imat_ind_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_imat_ind_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_muscle_ind_mva
-tbl_vaf_vat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_vat_ind_mva
-tbl_vaf_sat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_sat_ind_mva
-tbl_vaf_imat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_imat_ind_mva
-```
-
-
-#### c. Association with body composition proportion
-#### UVA
-```{r}
-tbl_vaf_muscle_prop_uva <- 
-  glm(log2_vaf ~
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_muscle_prop_uva
-tbl_vaf_vat_prop_uva <- 
-  glm(log2_vaf ~
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_vat_prop_uva
-tbl_vaf_sat_prop_uva <- 
-  glm(log2_vaf ~
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_sat_prop_uva
-tbl_vaf_imat_prop_uva <- 
-  glm(log2_vaf ~
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_imat_prop_uva
-```
-
-#### MVA
-```{r}
-tbl_vaf_muscle_prop_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_muscle_prop_mva
-tbl_vaf_vat_prop_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_vat_prop_mva
-tbl_vaf_sat_prop_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_sat_prop_mva
-tbl_vaf_imat_prop_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex +
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-tbl_vaf_imat_prop_mva
-```
-
-#### d. Association with others
-```{r}
-glm(log2_vaf ~
-      age_at_diagnosis_num + sex +
-      muscle_hu_sdhr,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-glm(log2_vaf ~
-      age_at_diagnosis_num + sex +
-      myosteatosis,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-glm(log2_vaf ~
-      age_at_diagnosis_num + sex +
-      sarcopenia,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
-
-```
-
-### B1. Continuous RAW VAF - stage
-#### a. BMI
-```{r}
-glm(vaf ~
-      age_at_diagnosis_num + sex + bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      bmi,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex + bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      bmi_cat,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_muscle_ind_mva -->
+<!-- tbl_vaf_vat_ind_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_vat_ind_mva -->
+<!-- tbl_vaf_sat_ind_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_sat_ind_mva -->
+<!-- tbl_vaf_imat_ind_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_imat_ind_mva -->
+<!-- ``` -->
 
 
-#### b. Association with height-indexed body composition features
-#### UVA
-```{r}
-tbl_vaf_muscle_ind_uva <- 
-  glm(vaf ~
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_ind_uva
-tbl_vaf_vat_ind_uva <- 
-  glm(vaf ~
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_ind_uva
-tbl_vaf_sat_ind_uva <- 
-  glm(vaf ~
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_ind_uva
-tbl_vaf_imat_ind_uva <- 
-  glm(vaf ~
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_ind_uva
-```
+<!-- #### c. Association with body composition proportion -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_muscle_prop_uva -->
+<!-- tbl_vaf_vat_prop_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_vat_prop_uva -->
+<!-- tbl_vaf_sat_prop_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_sat_prop_uva -->
+<!-- tbl_vaf_imat_prop_uva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_imat_prop_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_ind_mva
-tbl_vaf_vat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_ind_mva
-tbl_vaf_sat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_ind_mva
-tbl_vaf_imat_ind_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_ind_mva
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_muscle_prop_mva -->
+<!-- tbl_vaf_vat_prop_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_vat_prop_mva -->
+<!-- tbl_vaf_sat_prop_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_sat_prop_mva -->
+<!-- tbl_vaf_imat_prop_mva <-  -->
+<!--   glm(log2_vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- tbl_vaf_imat_prop_mva -->
+<!-- ``` -->
 
+<!-- #### d. Association with others -->
+<!-- ```{r} -->
+<!-- glm(log2_vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       muscle_hu_sdhr, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- glm(log2_vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       myosteatosis, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
+<!-- glm(log2_vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       sarcopenia, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)") -->
 
-#### c. Association with body composition proportion
-#### UVA
-```{r}
-tbl_vaf_muscle_prop_uva <- 
-  glm(vaf ~
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_prop_uva
-tbl_vaf_vat_prop_uva <- 
-  glm(vaf ~
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_prop_uva
-tbl_vaf_sat_prop_uva <- 
-  glm(vaf ~
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_prop_uva
-tbl_vaf_imat_prop_uva <- 
-  glm(vaf ~
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_prop_uva
-```
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        muscle_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_muscle_prop_mva
-tbl_vaf_vat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        vat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_vat_prop_mva
-tbl_vaf_sat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        sat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_sat_prop_mva
-tbl_vaf_imat_prop_mva <- 
-  glm(vaf ~
-        age_at_diagnosis_num + sex +
-        imat_proportion_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-tbl_vaf_imat_prop_mva
-```
-
-#### d. Association with others
-```{r}
-glm(vaf ~
-      age_at_diagnosis_num + sex +
-      muscle_hu_sdhr,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex +
-      myosteatosis,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-glm(vaf ~
-      age_at_diagnosis_num + sex +
-      sarcopenia,
-    # family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF")
-
-```
-
-### C1. Categorical VAF - stage
-
-#### a. BMI
-```{r}
-glm(vaf_cat ~
-      age_at_diagnosis_num + sex + bmi,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-glm(vaf_cat ~
-      bmi,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-glm(vaf_cat ~
-      age_at_diagnosis_num + sex + bmi_cat,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-glm(vaf_cat ~
-      bmi_cat,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-```
+<!-- ### B1. Continuous RAW VAF - stage -->
+<!-- #### a. BMI -->
+<!-- ```{r} -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       bmi, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       bmi_cat, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- ``` -->
 
 
-#### b. Association with height-indexed body composition features
-#### UVA
-```{r}
-tbl_vaf_muscle_ind_uva <- 
-  glm(vaf_cat ~
-        smi_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_muscle_ind_uva
-tbl_vaf_vat_ind_uva <- 
-  glm(vaf_cat ~
-        vat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_vat_ind_uva
-tbl_vaf_sat_ind_uva <- 
-  glm(vaf_cat ~
-        sat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_sat_ind_uva
-tbl_vaf_imat_ind_uva <- 
-  glm(vaf_cat ~
-        imat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_imat_ind_uva
-```
+<!-- #### b. Association with height-indexed body composition features -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_ind_uva -->
+<!-- tbl_vaf_vat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_ind_uva -->
+<!-- tbl_vaf_sat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_ind_uva -->
+<!-- tbl_vaf_imat_ind_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_ind_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        smi_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_muscle_ind_mva
-tbl_vaf_vat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        vat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_vat_ind_mva
-tbl_vaf_sat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        sat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_sat_ind_mva
-tbl_vaf_imat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        imat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_imat_ind_mva
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         smi_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_ind_mva -->
+<!-- tbl_vaf_vat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_ind_mva -->
+<!-- tbl_vaf_sat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_ind_mva -->
+<!-- tbl_vaf_imat_ind_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_ind_mva -->
+<!-- ``` -->
 
 
-#### c. Association with body composition proportion
-#### UVA
-```{r}
-tbl_vaf_muscle_prop_uva <- 
-  glm(vaf_cat ~
-        muscle_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_muscle_prop_uva
-tbl_vaf_vat_prop_uva <- 
-  glm(vaf_cat ~
-        vat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_vat_prop_uva
-tbl_vaf_sat_prop_uva <- 
-  glm(vaf_cat ~
-        sat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_sat_prop_uva
-tbl_vaf_imat_prop_uva <- 
-  glm(vaf_cat ~
-        imat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_imat_prop_uva
-```
+<!-- #### c. Association with body composition proportion -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_prop_uva -->
+<!-- tbl_vaf_vat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_prop_uva -->
+<!-- tbl_vaf_sat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_prop_uva -->
+<!-- tbl_vaf_imat_prop_uva <-  -->
+<!--   glm(vaf ~ -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_prop_uva -->
+<!-- ``` -->
 
-#### MVA
-```{r}
-tbl_vaf_muscle_prop_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        muscle_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_muscle_prop_mva
-tbl_vaf_vat_prop_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        vat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_vat_prop_mva
-tbl_vaf_sat_prop_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        sat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_sat_prop_mva
-tbl_vaf_imat_prop_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex +
-        imat_proportion_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-tbl_vaf_imat_prop_mva
-```
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         muscle_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_muscle_prop_mva -->
+<!-- tbl_vaf_vat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_vat_prop_mva -->
+<!-- tbl_vaf_sat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_sat_prop_mva -->
+<!-- tbl_vaf_imat_prop_mva <-  -->
+<!--   glm(vaf ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_proportion_sdhr, -->
+<!--       # family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- tbl_vaf_imat_prop_mva -->
+<!-- ``` -->
 
-#### d. Association with others
-```{r}
-glm(vaf_cat ~
-      age_at_diagnosis_num + sex +
-      muscle_hu_sdhr,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-glm(vaf_cat ~
-      age_at_diagnosis_num + sex +
-      myosteatosis,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
-glm(vaf_cat ~
-      age_at_diagnosis_num + sex +
-      sarcopenia,
-    family = "binomial",
-    data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10")
+<!-- #### d. Association with others -->
+<!-- ```{r} -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       muscle_hu_sdhr, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       myosteatosis, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
+<!-- glm(vaf ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       sarcopenia, -->
+<!--     # family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for continuous CH raw VAF") -->
 
-```
+<!-- ``` -->
+
+<!-- ### C1. Categorical VAF - stage -->
+
+<!-- #### a. BMI -->
+<!-- ```{r} -->
+<!-- glm(vaf_cat ~ -->
+<!--       age_at_diagnosis_num + sex + bmi, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- glm(vaf_cat ~ -->
+<!--       bmi, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- glm(vaf_cat ~ -->
+<!--       age_at_diagnosis_num + sex + bmi_cat, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- glm(vaf_cat ~ -->
+<!--       bmi_cat, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- ``` -->
+
+
+<!-- #### b. Association with height-indexed body composition features -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         smi_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_muscle_ind_uva -->
+<!-- tbl_vaf_vat_ind_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_vat_ind_uva -->
+<!-- tbl_vaf_sat_ind_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_sat_ind_uva -->
+<!-- tbl_vaf_imat_ind_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_imat_ind_uva -->
+<!-- ``` -->
+
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_ind_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         smi_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_muscle_ind_mva -->
+<!-- tbl_vaf_vat_ind_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_vat_ind_mva -->
+<!-- tbl_vaf_sat_ind_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_sat_ind_mva -->
+<!-- tbl_vaf_imat_ind_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_cm2_index_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_imat_ind_mva -->
+<!-- ``` -->
+
+
+<!-- #### c. Association with body composition proportion -->
+<!-- #### UVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         muscle_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_muscle_prop_uva -->
+<!-- tbl_vaf_vat_prop_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         vat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_vat_prop_uva -->
+<!-- tbl_vaf_sat_prop_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         sat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_sat_prop_uva -->
+<!-- tbl_vaf_imat_prop_uva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         imat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_imat_prop_uva -->
+<!-- ``` -->
+
+<!-- #### MVA -->
+<!-- ```{r} -->
+<!-- tbl_vaf_muscle_prop_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         muscle_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_muscle_prop_mva -->
+<!-- tbl_vaf_vat_prop_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         vat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_vat_prop_mva -->
+<!-- tbl_vaf_sat_prop_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         sat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_sat_prop_mva -->
+<!-- tbl_vaf_imat_prop_mva <-  -->
+<!--   glm(vaf_cat ~ -->
+<!--         age_at_diagnosis_num + sex + -->
+<!--         imat_proportion_sdhr, -->
+<!--       family = "binomial", -->
+<!--       data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- tbl_vaf_imat_prop_mva -->
+<!-- ``` -->
+
+<!-- #### d. Association with others -->
+<!-- ```{r} -->
+<!-- glm(vaf_cat ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       muscle_hu_sdhr, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- glm(vaf_cat ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       myosteatosis, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+<!-- glm(vaf_cat ~ -->
+<!--       age_at_diagnosis_num + sex + -->
+<!--       sarcopenia, -->
+<!--     family = "binomial", -->
+<!--     data = vaf_reg_dat) %>% -->
+<!--   tbl_regression(exponentiate = TRUE -->
+<!--                  ) %>% -->
+<!--   modify_spanning_header(everything() ~ "Regression for categorical CH VAF≥0.10") -->
+
+<!-- ``` -->
 <br>
 
 # VI. Survival - OS
