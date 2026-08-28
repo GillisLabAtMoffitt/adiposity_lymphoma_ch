@@ -1,5 +1,5 @@
 ---
-title: "Lymphoma_obesity_analysis"
+title: "Lymphoma obesity analysis using VAF ≥ 0.02 to classify CH"
 author: "Christelle Colin-Leitzinger"
 date: "`r Sys.Date()`"
 output:
@@ -277,6 +277,40 @@ lymphoma_data <- lymphoma_data %>%
 
 ```{r}
 ch_mutation <- ch_mutation %>% 
+  # Filter VAF
+  mutate(ch_status = case_when(
+    ch_status == "No CH"              ~ "No CH",
+    vaf >= 0.02                       ~ "CH"
+  )) |> 
+  group_by(patient_id) |> 
+  fill(ch_status) |> 
+  mutate(n = n()) |> 
+  ungroup() |> 
+  filter(ch_status == "CH" |
+           ch_status == "No CH" |
+           (is.na(ch_status)) & n == 1) |> 
+  mutate(ch_status = case_when(
+    ch_status == "No CH"              ~ "No CH",
+    ch_status == "CH"                 ~ "CH",
+    is.na(ch_status)                  ~ "No CH"
+  )) |> 
+  select(-n) |> 
+  mutate(across(c(where(is.character), where(is.logical),
+                  -c("patient_id", "ch_status",
+                     "study_id", "source_sample_id"
+                  )),
+                ~ case_when(
+                  ch_status == "No CH"              ~ NA_character_,
+                  ch_status == "CH"                 ~ as.character(.)
+                ))) |> 
+  mutate(across(c(where(is.numeric),
+                  -c("patient_id", "ch_status",
+                     "study_id", "source_sample_id"
+                  )),
+                ~ case_when(
+                  ch_status == "No CH"              ~ NA_real_,
+                  ch_status == "CH"                 ~ as.numeric(.)
+                ))) |> 
   inner_join(sample_list %>%
               select(source_sample_id, mrn) %>%
               distinct(), .,
