@@ -2118,30 +2118,62 @@ glm(log2_vaf ~
       age_at_diagnosis_num + sex + stage + bmi,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 glm(log2_vaf ~
       bmi,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 glm(log2_vaf ~
       age_at_diagnosis_num + sex + stage + bmi_cat,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 glm(log2_vaf ~
       bmi_cat,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 ```
 
 
@@ -2153,36 +2185,68 @@ tbl_vaf_muscle_ind_uva <-
         smi_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_muscle_ind_uva
 tbl_vaf_vat_ind_uva <- 
   glm(log2_vaf ~
         vat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_vat_ind_uva
 tbl_vaf_sat_ind_uva <- 
   glm(log2_vaf ~
         sat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_sat_ind_uva
 tbl_vaf_imat_ind_uva <- 
   glm(log2_vaf ~
         imat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_imat_ind_uva
 ```
 
@@ -2194,9 +2258,17 @@ tbl_vaf_muscle_ind_mva <-
         smi_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_muscle_ind_mva
 tbl_vaf_vat_ind_mva <- 
   glm(log2_vaf ~
@@ -2204,9 +2276,17 @@ tbl_vaf_vat_ind_mva <-
         vat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_vat_ind_mva
 tbl_vaf_sat_ind_mva <- 
   glm(log2_vaf ~
@@ -2214,9 +2294,17 @@ tbl_vaf_sat_ind_mva <-
         sat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_sat_ind_mva
 tbl_vaf_imat_ind_mva <- 
   glm(log2_vaf ~
@@ -2224,9 +2312,17 @@ tbl_vaf_imat_ind_mva <-
         imat_cm2_index_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_imat_ind_mva
 ```
 
@@ -2239,36 +2335,68 @@ tbl_vaf_muscle_prop_uva <-
         muscle_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_muscle_prop_uva
 tbl_vaf_vat_prop_uva <- 
   glm(log2_vaf ~
         vat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_vat_prop_uva
 tbl_vaf_sat_prop_uva <- 
   glm(log2_vaf ~
         sat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_sat_prop_uva
 tbl_vaf_imat_prop_uva <- 
   glm(log2_vaf ~
         imat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_imat_prop_uva
 ```
 
@@ -2280,9 +2408,17 @@ tbl_vaf_muscle_prop_mva <-
         muscle_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_muscle_prop_mva
 tbl_vaf_vat_prop_mva <- 
   glm(log2_vaf ~
@@ -2290,9 +2426,17 @@ tbl_vaf_vat_prop_mva <-
         vat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_vat_prop_mva
 tbl_vaf_sat_prop_mva <- 
   glm(log2_vaf ~
@@ -2300,9 +2444,17 @@ tbl_vaf_sat_prop_mva <-
         sat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_sat_prop_mva
 tbl_vaf_imat_prop_mva <- 
   glm(log2_vaf ~
@@ -2310,9 +2462,17 @@ tbl_vaf_imat_prop_mva <-
         imat_proportion_sdhr,
       # family = "binomial",
       data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 tbl_vaf_imat_prop_mva
 ```
 
@@ -2323,25 +2483,49 @@ glm(log2_vaf ~
       muscle_hu_sdhr,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 glm(log2_vaf ~
       age_at_diagnosis_num + sex + stage +
       myosteatosis,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 glm(log2_vaf ~
       age_at_diagnosis_num + sex + stage +
       sarcopenia,
     # family = "binomial",
     data = vaf_reg_dat) %>%
-  tbl_regression(exponentiate = TRUE
-                 ) %>%
-  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF)")
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
 
 ```
 
