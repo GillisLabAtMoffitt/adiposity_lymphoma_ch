@@ -1107,134 +1107,224 @@ coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
 
 # Multiple comparison
 ```{r}
-tbl_ch_muscle_ind_mva <- 
-  glm(ch_status ~
+# tbl_ch_muscle_ind_mva <- 
+#   glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           smi_sdhr,
+#     family = "binomial",
+#     data = lymphoma_data)
+# 
+# tbl_ch_vat_ind_mva <- 
+#   glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           vat_cm2_index_sdhr,
+#     family = "binomial",
+#     data = lymphoma_data)
+# 
+# tbl_ch_sat_ind_mva <- 
+#   glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           sat_cm2_index_sdhr,
+#     family = "binomial",
+#     data = lymphoma_data)
+# 
+# tbl_ch_imat_ind_mva <- 
+#   glm(ch_status ~
+#       age_at_diagnosis_num + sex + stage +
+#           imat_cm2_index_sdhr,
+#     family = "binomial",
+#     data = lymphoma_data)
+# 
+# vaf_reg_dat <- ch_mutation %>% 
+#   filter(!is.na(vaf)) %>%
+#   select(mrn, vaf) %>% 
+#   arrange(mrn, desc(vaf)) %>% 
+#   distinct(mrn, .keep_all = TRUE) |>
+#   mutate(log2_vaf = log2(vaf)) %>% 
+#   mutate(vaf_cat = case_when(
+#     vaf >= 0.10           ~ 1,
+#     vaf < 0.10            ~ 0
+#   )) %>% 
+#   full_join(lymphoma_data, 
+#             ., 
+#             by = "mrn") %>% 
+#   filter(!is.na(vaf))
+# 
+# tbl_vaf_muscle_ind_mva <- 
+#   glm(log2_vaf ~
+#         age_at_diagnosis_num + sex + stage +
+#         smi_sdhr,
+#       # family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vaf_vat_ind_mva <- 
+#   glm(log2_vaf ~
+#         age_at_diagnosis_num + sex + stage +
+#         vat_cm2_index_sdhr,
+#       # family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vaf_sat_ind_mva <- 
+#   glm(log2_vaf ~
+#         age_at_diagnosis_num + sex + stage +
+#         sat_cm2_index_sdhr,
+#       # family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vaf_imat_ind_mva <- 
+#   glm(log2_vaf ~
+#         age_at_diagnosis_num + sex + stage +
+#         imat_cm2_index_sdhr,
+#       # family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vafcat_muscle_ind_mva <- 
+#   glm(vaf_cat ~
+#         age_at_diagnosis_num + sex + stage +
+#         smi_sdhr,
+#       family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vafcat_vat_ind_mva <- 
+#   glm(vaf_cat ~
+#         age_at_diagnosis_num + sex + stage +
+#         vat_cm2_index_sdhr,
+#       family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vafcat_sat_ind_mva <- 
+#   glm(vaf_cat ~
+#         age_at_diagnosis_num + sex + stage +
+#         sat_cm2_index_sdhr,
+#       family = "binomial",
+#       data = vaf_reg_dat)
+# 
+# tbl_vafcat_imat_ind_mva <- 
+#   glm(vaf_cat ~
+#         age_at_diagnosis_num + sex + stage +
+#         imat_cm2_index_sdhr,
+#       family = "binomial",
+#       data = vaf_reg_dat)
+
+```
+
+```{r}
+tbl_dnmt3a_muscle_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           smi_sdhr,
     family = "binomial",
     data = lymphoma_data)
-
-tbl_ch_vat_ind_mva <- 
-  glm(ch_status ~
+  
+tbl_dnmt3a_vat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           vat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data)
-
-tbl_ch_sat_ind_mva <- 
-  glm(ch_status ~
+  
+tbl_dnmt3a_sat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           sat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data)
-
-tbl_ch_imat_ind_mva <- 
-  glm(ch_status ~
+  
+tbl_dnmt3a_imat_ind_mva <- glm(mutation_gene_DNMT3A ~
       age_at_diagnosis_num + sex + stage +
           imat_cm2_index_sdhr,
     family = "binomial",
     data = lymphoma_data)
 
+tbl_ppm1d_muscle_ind_mva <- glm(mutation_gene_PPM1D ~
+      age_at_diagnosis_num + sex + stage +
+          smi_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
+tbl_ppm1d_vat_ind_mva <- glm(mutation_gene_PPM1D ~
+      age_at_diagnosis_num + sex + stage +
+          vat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+tbl_ppm1d_sat_ind_mva <- glm(mutation_gene_PPM1D ~
+      age_at_diagnosis_num + sex + stage +
+          sat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+tbl_ppm1d_imat_ind_mva <- glm(mutation_gene_PPM1D ~
+      age_at_diagnosis_num + sex + stage +
+          imat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
+tbl_tet2_muscle_ind_mva <- glm(mutation_gene_TET2 ~
+      age_at_diagnosis_num + sex + stage +
+          smi_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
+tbl_tet2_vat_ind_mva <- glm(mutation_gene_TET2 ~
+      age_at_diagnosis_num + sex + stage +
+          vat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
+tbl_tet2_sat_ind_mva <- glm(mutation_gene_TET2 ~
+      age_at_diagnosis_num + sex + stage +
+          sat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
+tbl_tet2_imat_ind_mva <- glm(mutation_gene_TET2 ~
+      age_at_diagnosis_num + sex + stage +
+          imat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+  
 ```
 
-
-```{r}
-vaf_reg_dat <- ch_mutation %>% 
-  filter(!is.na(vaf)) %>%
-  select(mrn, vaf) %>% 
-  arrange(mrn, desc(vaf)) %>% 
-  distinct(mrn, .keep_all = TRUE) |>
-  mutate(log2_vaf = log2(vaf)) %>% 
-  mutate(vaf_cat = case_when(
-    vaf >= 0.10           ~ 1,
-    vaf < 0.10            ~ 0
-  )) %>% 
-  full_join(lymphoma_data, 
-            ., 
-            by = "mrn") %>% 
-  filter(!is.na(vaf))
-```
-
-```{r}
-tbl_vaf_muscle_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex + stage +
-        smi_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vaf_vat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex + stage +
-        vat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vaf_sat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex + stage +
-        sat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vaf_imat_ind_mva <- 
-  glm(log2_vaf ~
-        age_at_diagnosis_num + sex + stage +
-        imat_cm2_index_sdhr,
-      # family = "binomial",
-      data = vaf_reg_dat)
-
-```
-
-```{r}
-tbl_vafcat_muscle_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex + stage +
-        smi_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vafcat_vat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex + stage +
-        vat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vafcat_sat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex + stage +
-        sat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat)
-
-tbl_vafcat_imat_ind_mva <- 
-  glm(vaf_cat ~
-        age_at_diagnosis_num + sex + stage +
-        imat_cm2_index_sdhr,
-      family = "binomial",
-      data = vaf_reg_dat)
-
-```
 
 I added 24 models into the multiple comparison adjustment. The resulting p value are presented below.   
-The models with the prefix `CH_` are for the CH status outcome, `VAF_` for the log2VAF outcome, and `VAFc_` for the categorical VAF outcome.   
-The sufixe is the predictor included.   
+The models with the prefix `CH_` are for the CH status outcome, `DNMT3A/PPM1D/TET_` for the CHgene outcome.
+The suffix is the predictor included.   
 All these models are adjusted by age + sex + stage.
 ```{r}
+# models <- list(
+#     CH_SMI  = tbl_ch_muscle_ind_mva,
+#     CH_VATI  = tbl_ch_vat_ind_mva,
+#     CH_SATI  = tbl_ch_sat_ind_mva,
+#     CH_IMATI = tbl_ch_imat_ind_mva,
+#     DNMT3A_SMI  = tbl_DNMT3A_muscle_ind_mva,
+#     DNMT3A_VATI  = tbl_DNMT3A_vat_ind_mva,
+#     DNMT3A_SATI  = tbl_DNMT3A_sat_ind_mva,
+#     DNMT3A_IMATI = tbl_DNMT3A_imat_ind_mva,
+#     PPM1D_SMI  = tbl_vafcat_muscle_ind_mva,
+#     PPM1D_VATI = tbl_vafcat_vat_ind_mva,
+#     PPM1D_SATI  = tbl_vafcat_sat_ind_mva,
+#     PPM1D_IMATI = tbl_vafcat_imat_ind_mva,
+#     TET_SMI  = tbl_vafcat_muscle_ind_mva,
+#     TET_VATI = tbl_vafcat_vat_ind_mva,
+#     TET_SATI  = tbl_vafcat_sat_ind_mva,
+#     TET_IMATI = tbl_vafcat_imat_ind_mva
+# )
+
 models <- list(
     CH_SMI  = tbl_ch_muscle_ind_mva,
     CH_VATI  = tbl_ch_vat_ind_mva,
     CH_SATI  = tbl_ch_sat_ind_mva,
     CH_IMATI = tbl_ch_imat_ind_mva,
-    VAF_SMI  = tbl_vaf_muscle_ind_mva,
-    VAF_VATI  = tbl_vaf_vat_ind_mva,
-    VAF_SATI  = tbl_vaf_sat_ind_mva,
-    VAF_IMATI = tbl_vaf_imat_ind_mva,
-    VAFc_SMI  = tbl_vafcat_muscle_ind_mva,
-    VAFc_VATI = tbl_vafcat_vat_ind_mva,
-    VAFc_SATI  = tbl_vafcat_sat_ind_mva,
-    VAFc_IMATI = tbl_vafcat_imat_ind_mva
+    DNMT3A_SMI  = tbl_dnmt3a_muscle_ind_mva,
+    DNMT3A_VATI  = tbl_dnmt3a_vat_ind_mva,
+    DNMT3A_SATI  = tbl_dnmt3a_sat_ind_mva,
+    DNMT3A_IMATI = tbl_dnmt3a_imat_ind_mva,
+    PPM1D_SMI  = tbl_ppm1d_muscle_ind_mva,
+    PPM1D_VATI = tbl_ppm1d_vat_ind_mva,
+    PPM1D_SATI  = tbl_ppm1d_sat_ind_mva,
+    PPM1D_IMATI = tbl_ppm1d_imat_ind_mva,
+    TET_SMI  = tbl_tet2_muscle_ind_mva,
+    TET_VATI = tbl_tet2_vat_ind_mva,
+    TET_SATI  = tbl_tet2_sat_ind_mva,
+    TET_IMATI = tbl_tet2_imat_ind_mva
 )
 
 exposure_terms <- c(
