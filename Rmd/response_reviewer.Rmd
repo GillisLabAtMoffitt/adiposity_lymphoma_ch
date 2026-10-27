@@ -1,0 +1,1280 @@
+---
+title: "Responses to reviewer"
+author: "Christelle Colin-Leitzinger"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    theme: united
+    highlight: pygments
+    df_print: kable
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE,
+                      fig.align='center'
+                      )
+```
+
+```{r library, echo = FALSE}
+library(tidyverse)
+library(labelled)
+library(gtsummary)
+library(gt)
+library(survminer)
+library(survival)
+library(patchwork)
+theme_gtsummary_compact()
+theme_set(theme_classic())
+```
+
+<style>
+div.darkblue { background-color:#0099CC; border-radius: 5px; padding: 20px; font-size: 38px}
+</style>
+<div class = "blue">
+
+<span style="color: white;">CH in Lymphoma and obesity analysis</span>
+
+</div>
+<br>
+
+```{r load}
+lymphoma_data <- read_rds(paste0(here::here(), 
+                            "/data/processed data",
+                            "/LymphomaObesity_Data_20260629.rds")) %>% 
+  select(-ch_status)
+path <- fs::path("", "Volumes", "Gillis_Research",
+                 "Lab_Data", "LymphomaObesity")
+sample_list <- 
+  readxl::read_xlsx(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_Shipping Manifest_EXP2052DNA_PHI_20240504.xlsx"), 
+    sheet = "Shipping Manifest_w PHI") %>% 
+  janitor::clean_names()
+ch_mutation <- 
+  readxl::read_xlsx(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_CHcalls_20260417.xlsx"), 
+    na = "NA") %>% 
+  janitor::clean_names()
+
+drug_dat <- 
+  readxl::read_xlsx(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_DrugDataEHR_20260701.xlsx"), na = "NA") %>% 
+  janitor::clean_names() %>% 
+  filter(is.na(exclude)) %>% 
+  select(mrn, regimen, regimen_start = start, regimen_stop = stop, 
+         progression_date = progression, last_prog_fu, notes)
+
+ipi_dat <- 
+  readxl::read_xls(paste0(# path,
+    here::here(), "/data/raw data",
+    "/Lymphoma_IPIReviewed_20261023.xls")) %>% 
+  janitor::clean_names() |> 
+  select(mrn, ipi_score, ipi_cat = group) |> 
+  mutate(mrn = as.character(mrn))
+
+```
+
+```{r}
+lymphoma_data <- lymphoma_data %>% 
+  mutate(age_sq = age_at_diagnosis_num^2) |> 
+  mutate(race = factor(race, levels = c("White", "Other"))) %>% 
+  mutate(ethnicity_src_desc = na_if(ethnicity_src_desc, "UNKNOWN")) |> 
+  mutate(ethnicity_src_desc = case_when(
+    is.na(ethnicity_src_desc)            ~ "SPANISH NOS",
+    TRUE                                 ~ ethnicity_src_desc
+  )) %>% 
+  mutate(year_at_dx = year(dx_dt)) %>% 
+  mutate(year_at_dx_cat = case_when(
+    year_at_dx >= 2011 &
+      year_at_dx <= 2017                  ~ "2011-2017",
+    year_at_dx >= 2018 &
+      year_at_dx <= 2022                  ~ "2018-2022",
+    TRUE                                  ~ as.character(year_at_dx)
+  )) %>% 
+  left_join(., ipi_dat, by = "mrn") |>
+  mutate(ipi_score = factor(ipi_score)) %>% 
+  mutate(ipi_cat_ekram = str_to_title(ipi_cat)) |> 
+  mutate(ipi_cat_ekram = factor(ipi_cat_ekram, levels = c("Low", "Low Intermediate", "High Intermediate", "High"))) %>% 
+  mutate(ipi_cat = case_when(
+    ipi_score == 1                        ~ "Low",
+    ipi_score == 2                        ~ "Low Intermediate",
+    ipi_score == 3                        ~ "High Intermediate",
+    ipi_score == 4                        ~ "High",
+    ipi_score == 5                        ~ "High"
+  )) |> 
+  mutate(ipi_cat = factor(ipi_cat, levels = c("Low", "Low Intermediate", "High Intermediate", "High"))) %>% 
+  mutate(ipi_cat2 = case_when(
+    str_detect(ipi_cat, "Low")                       ~ "Low",
+    str_detect(ipi_cat, "High")                      ~ "High"
+  )) %>% 
+  mutate(ipi_cat2 = factor(ipi_cat2, levels = c("Low", "High"))) %>% 
+  mutate(stage1 = case_when(
+    str_detect(stage_tnm_cs_mixed_group_desc, "1")   ~ "I",
+    str_detect(stage_tnm_cs_mixed_group_desc, "2")   ~ "II",
+    str_detect(stage_tnm_cs_mixed_group_desc, "3")   ~ "III",
+    str_detect(stage_tnm_cs_mixed_group_desc, "4")   ~ "IV"
+  )) %>% 
+  mutate(stage = case_when(
+    stage1 %in% c("I", "II")              ~ "I-II",
+    stage1 %in% c("III", "IV")            ~ "III-IV"
+  )) %>% 
+  mutate(stage2 = case_when(
+    stage1 %in% c("I", "II", "III")       ~ "I-III",
+    stage1 %in% c("IV")                   ~ "IV"
+  )) %>% 
+  left_join(., drug_dat %>% 
+              mutate(mrn = as.character(mrn)),
+            by = "mrn") %>% 
+  mutate(progression_date = as.Date(as.numeric(progression_date), origin = "1899-12-30")) %>% 
+  mutate(pfs_event = case_when(
+    !is.na(progression_date)         ~ 1,
+    os_event == 1                    ~ 1,
+    os_event == 0                    ~ 0
+  )) %>% 
+  mutate(pfs_date = case_when(
+    !is.na(progression_date)         ~ progression_date,
+    os_event == 1                    ~ last_prog_fu,
+    os_event == 0                    ~ last_prog_fu
+  )) %>% 
+  mutate(pfs_time_from_treatment_months = interval(start = regimen_start, end = pfs_date) /
+           duration(n=1, unit = "months")) %>% 
+  
+  # select(mrn, progression_date, pfs_event, pfs_date, pfs_time_from_treatment_months, os_event, os_time_from_treatment_months,
+  #        date_of_last_contact, last_prog_fu, notes) %>% 
+  # mutate(last_prog_fu == date_of_last_contact)
+  
+  mutate(regimen_cat = case_when(
+    str_detect(regimen, "CHOP")        ~ "R-CHOP",
+    str_detect(regimen, "EPOCH")       ~ "DA-EPOCH-R"
+  )) %>% 
+  mutate(time_sample_first_treatment = interval(start = first_treatment_dt, end = collection_dt_germline) /
+           duration(n=1, unit = "days")) #%>% 
+  # select(mrn, first_treatment_dt, collection_dt_germline)
+
+lymphoma_data <- lymphoma_data %>% 
+  # Index
+  mutate(across(c(ends_with("_cm2")
+                  ), ~ . / (height_m ^2), 
+                .names = "{.col}_index")) %>% 
+  rename(smi = muscle_cm2_index) %>% 
+  # Sarcopenia
+  mutate(sarcopenia = case_when(
+    sex == "Female" &
+      smi >= 38.5                         ~ "≥ cutoff",
+    sex == "Female" &
+      smi < 38.5                          ~ "Sarcopenia",
+    sex == "Male" &
+      smi >= 52.4                         ~ "≥ cutoff",
+    sex == "Male" &
+      smi < 52.4                          ~ "Sarcopenia"
+  )) %>%
+  # Myosteatosis - skeletal muscle fat infiltration
+  mutate(myosteatosis = case_when(
+    bmi < 25 &
+      muscle_hu < 41                      ~ "Myosteatosis",
+    bmi >= 25 &
+      muscle_hu < 33                      ~ "Myosteatosis",
+    !is.na(muscle_hu) &
+      !is.na(bmi)                         ~ "No myosteatosis"
+  ), myosteatosis = factor(myosteatosis, levels = c("No myosteatosis", "Myosteatosis"))) %>%
+  # TAT
+  mutate(tat_cm2 = case_when(
+    is.na(vat_cm2) |
+    is.na(sat_cm2) |
+    is.na(imat_cm2)                       ~ NA_real_,
+    TRUE                                  ~ vat_cm2 + sat_cm2 + imat_cm2
+  )) %>% 
+  mutate(tat_cm2_index = case_when(
+    is.na(vat_cm2_index) |
+    is.na(sat_cm2_index) |
+    is.na(imat_cm2_index)                 ~ NA_real_,
+    TRUE                                  ~ vat_cm2_index + sat_cm2_index + imat_cm2_index
+  )) %>% 
+  # V/S ratio
+  mutate(v_s_ratio = vat_cm2 / sat_cm2) %>% 
+  mutate(visceral_obesity = case_when(
+    v_s_ratio > 0.4                       ~ "Viscerally obese",
+    !is.na(v_s_ratio)                     ~ "Not viscerally obese"
+  )) %>% 
+  # Proportion - remove the values if one feature is NA
+  mutate(muscle_proportion = muscle_cm2 / 
+           (muscle_cm2 + vat_cm2 +
+              sat_cm2 + imat_cm2)) %>% 
+  mutate(vat_proportion = vat_cm2 / 
+           (muscle_cm2 + vat_cm2 +
+              sat_cm2 + imat_cm2)) %>% 
+  mutate(sat_proportion = sat_cm2 / 
+           (muscle_cm2 + vat_cm2 +
+              sat_cm2 + imat_cm2)) %>% 
+  mutate(imat_proportion = imat_cm2 / 
+           (muscle_cm2 + vat_cm2 +
+              sat_cm2 + imat_cm2)) %>% 
+  # mutate(muscle_proportionindex = smi / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(vat_proportionindex = vat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(sat_proportionindex = sat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  # mutate(imat_proportionindex = imat_cm2_index / 
+  #          (smi + vat_cm2_index +
+  #             sat_cm2_index + imat_cm2_index)) %>% 
+  mutate(across(c(contains("_proportion")), ~ case_when(
+    is.na(muscle_cm2) |
+    is.na(vat_cm2) |
+    is.na(sat_cm2) |
+    is.na(imat_cm2)                    ~ NA_real_,
+    TRUE                               ~ .
+  )))
+
+lymphoma_data <- lymphoma_data %>% 
+  # Make categorical var
+  mutate(across(c(smi, ends_with("_index"),
+                  "muscle_hu",
+                  "vat_cm2", "sat_cm2", "imat_cm2",
+                  "tat_cm2",
+                  "v_s_ratio",
+                  contains("_proportion")
+                  ), ~ case_when(
+    ntile(., 3) == 1 ~ "Low",
+    ntile(., 3) == 2 ~ "Medium",
+    ntile(., 3) == 3 ~ "High"),
+    .names = "{.col}_tertcat")) %>% 
+  mutate(across(c(ends_with("_tertcat")), 
+                ~ factor(., levels = 
+                           c("Low", "Medium", "High"))))
+```
+
+
+```{r}
+# lymphoma_data <- lymphoma_data %>% 
+#   # Make 1-standard deviation increase of the height indexed feature
+#   mutate(across(c("muscle_hu", "muscle_cm2",
+#                   "vat_cm2", "sat_cm2", "imat_cm2",
+#                   "tat_cm2"#,
+#                   # contains("_proportion")
+#                   ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
+
+lymphoma_data <- lymphoma_data %>% 
+  # Make 1-standard deviation z score
+  mutate(across(c("smi", "muscle_hu",
+                  "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+                  "tat_cm2_index"#,
+                  # contains("_proportion")
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
+  # group_by(sex) %>% 
+  # mutate(across(c("muscle_hu", "smi",
+  #                 "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+  #                 "tat_cm2_index",
+  #                 ends_with("_proportion")
+  #                 ), ~ mean(., na.rm = TRUE) , .names = "{.col}_mean")) %>% 
+  # mutate(across(c("muscle_hu", "smi",
+  #                 "vat_cm2_index", "sat_cm2_index", "imat_cm2_index",
+  #                 "tat_cm2_index",
+  #                 ends_with("_proportion")
+  #                 ), ~ sd(., na.rm = TRUE) , .names = "{.col}_sd")) %>% 
+  # ungroup() %>% 
+  # mutate(muscle_hu_sdhr = (muscle_hu - muscle_hu_mean) / muscle_hu_sd) %>% 
+  # mutate(smi_sdhr = (smi - smi_mean) / smi_sd) %>% 
+  # mutate(vat_cm2_index_sdhr = (vat_cm2_index - vat_cm2_index_mean) / vat_cm2_index_sd) %>% 
+  # mutate(sat_cm2_index_sdhr = (sat_cm2_index - sat_cm2_index_mean) / sat_cm2_index_sd) %>% 
+  # mutate(imat_cm2_index_sdhr = (imat_cm2_index - imat_cm2_index_mean) / imat_cm2_index_sd) %>% 
+  # mutate(tat_cm2_index_sdhr = (tat_cm2_index - tat_cm2_index_mean) / tat_cm2_index_sd) %>% 
+  # mutate(muscle_proportion_sdhr = (muscle_proportion - muscle_proportion_mean) / muscle_proportion_sd) %>% 
+  # mutate(vat_proportion_sdhr = (vat_proportion - vat_proportion_mean) / vat_proportion_sd) %>% 
+  # mutate(sat_proportion_sdhr = (sat_proportion - sat_proportion_mean) / sat_proportion_sd) %>% 
+  # mutate(imat_proportion_sdhr = (imat_proportion - imat_proportion_mean) / imat_proportion_sd) #%>% 
+  
+  # select(mrn, sex, contains("imat"), -contains("tertcat"))
+  
+
+lymphoma_data <- lymphoma_data %>%
+  # Make 1-standard deviation increase of the height indexed feature
+  mutate(across(c(contains("_proportion") & where(is.numeric)
+                  ), ~ . / sd(., na.rm = TRUE) , .names = "{.col}_sdhr"))
+```
+
+```{r}
+ch_mutation <- ch_mutation %>% 
+  inner_join(sample_list %>%
+              select(source_sample_id, mrn) %>%
+              distinct(), .,
+            by = "source_sample_id") %>%
+  mutate(mrn = as.character(mrn)) %>%
+  mutate(patient_l_ch = case_when(
+    l_ch == "TRUE"                     ~ "L-CH"
+  )) %>% 
+  group_by(mrn) %>%
+  mutate(number_of_mutation_per_patient = case_when(
+    is.na(gene)                        ~ NA_real_,
+    TRUE                               ~ n()
+  )) %>% 
+  fill(patient_l_ch, .direction = "updown") %>% 
+  ungroup()
+
+library(fastDummies)
+ch_mutation1 <- ch_mutation %>% 
+  filter(!is.na(gene)) %>% 
+  select(mrn, number_of_mutation_per_patient, gene, variant_p) %>% 
+  unite(mutation_variant, c(gene, variant_p)) %>%
+  distinct()
+
+mutation_variant_wide <- dummy_cols(.data = ch_mutation1, select_columns = "mutation_variant",
+                                    remove_selected_columns = TRUE,
+                                    omit_colname_prefix = FALSE, ignore_na = TRUE) %>%
+  group_by(mrn, number_of_mutation_per_patient) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+ch_mutation1 <- ch_mutation %>% 
+  filter(!is.na(gene)) %>% 
+  select(mrn, mutation_gene = gene) %>% 
+  distinct()
+
+mutation_gene_wide <- dummy_cols(.data = ch_mutation1, select_columns = "mutation_gene",
+                                    remove_selected_columns = TRUE,
+                                    omit_colname_prefix = FALSE, ignore_na = TRUE) %>%
+  group_by(mrn) %>%
+  summarise(across(everything(), sum)) %>%
+  ungroup()
+
+lymphoma_data <- lymphoma_data %>%
+  inner_join(., ch_mutation %>% 
+               select(mrn, ch_status, patient_l_ch) %>% 
+               distinct(), 
+             by = "mrn") %>%
+  full_join(., mutation_variant_wide, by = "mrn") %>%
+  full_join(., mutation_gene_wide, by = "mrn") %>%
+  mutate(across(c(starts_with("mutation_variant") | 
+                    starts_with("mutation_gene")
+                  ), .fns = ~ replace_na(., 0))) %>% 
+  mutate(ch_status = factor(ch_status, levels = c("No CH", "CH")))
+```
+
+```{r Labeling data}
+var_label(lymphoma_data) <- list(age_at_diagnosis_num = "Patient age",
+                                 year_at_dx_cat = "Year of diagnosis",
+                                 time_sample_first_treatment = "Time from sample to first treatment (days)",
+                                 sex = "Sex",
+                                 race_cr_src_desc_1	 = "Race (raw)",
+                                 race = "Race", ethnicity_src_desc = "Ethnicity",
+                                 histology_desc = "Histology",
+                                 stage = "Stage",
+                                 bmi = "BMI (kg/m², continuous)",
+                                 bmi_cat = "BMI (kg/m², categorical)",
+                                 bsa_du_bois = "BSA (Dubois formula)",
+                                 bsa_cat = "BSA (categorical)",
+                                 weight_kg = "Weight (kg)",
+                                 height_m = "Height (m)",
+                                 regimen_cat = "First course treatment",
+                                 v_s_ratio = "V/S ratio",
+                                 visceral_obesity = "Visceral obesity",
+                                 tat_cm2 = "TAT",
+                                 smi = "SMI",
+                                 sarcopenia = "Sarcopenia",
+                                 vat_cm2_index = "VATI",
+                                 sat_cm2_index = "SATI",
+                                 imat_cm2_index = "IMATI",
+                                 tat_cm2_index = "TATI",
+                                 muscle_proportion = "Muscle proportion",
+                                 vat_proportion = "VAT proportion",
+                                 sat_proportion = "SAT proportion",
+                                 imat_proportion = "IMAT proportion",
+                                 
+                                 smi_sdhr = "SMI",
+                                 vat_cm2_index_sdhr = "VATI",
+                                 sat_cm2_index_sdhr = "SATI",
+                                 imat_cm2_index_sdhr = "IMATI",
+                                 tat_cm2_index_sdhr = "TATI",
+                                 muscle_proportion_sdhr = "Muscle proportion",
+                                 vat_proportion_sdhr = "VAT proportion",
+                                 sat_proportion_sdhr = "SAT proportion",
+                                 imat_proportion_sdhr = "IMAT proportion",
+                                 
+                                 os_event = "Deaths",
+                                 # os_time_from_treatment_months = "Follow-up time from treatment (months)",
+                                 ch_status = "CH status"
+)
+```
+
+# I. Correlation of CH with age
+```{r}
+lymphoma_data %>%
+  select(age_at_diagnosis_num,
+         age_sq,
+         ch_status
+         ) %>%
+  tbl_summary(by = ch_status,
+              statistic = list(all_continuous() ~ 
+                                 "{median} [{min}-{max}]"),
+              digits = list(all_continuous() ~ 1)) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>%
+  modify_header(label ~ "**Patient characteristics**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+```
+
+## Age
+```{r}
+glm(ch_status ~
+      age_at_diagnosis_num,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  add_n() |> add_nevent() |> 
+  modify_spanning_header(everything() ~ "Regression for CH status")
+lymphoma_data |> 
+  select(ch_status, age_at_diagnosis_num) |> 
+  ggplot(aes(x = ch_status, y = age_at_diagnosis_num))+
+  geom_boxplot()+
+  geom_jitter()+
+  stat_compare_means(method = "wilcox.test", label = "p.format" )
+```
+
+```{r}
+vaf_reg_dat <- ch_mutation %>% 
+  filter(!is.na(vaf)) %>%
+  select(mrn, vaf) %>% 
+  arrange(mrn, desc(vaf)) %>% 
+  # distinct(mrn, .keep_all = TRUE) |> 
+  mutate(log2_vaf = log2(vaf)) %>% 
+  mutate(vaf_cat = case_when(
+    vaf >= 0.10           ~ 1,
+    vaf < 0.10            ~ 0
+  )) %>% 
+  full_join(lymphoma_data, 
+            ., 
+            by = "mrn") %>% 
+  filter(!is.na(vaf))
+
+vaf_reg_dat |> 
+  select(vaf, log2_vaf, age_at_diagnosis_num) |> 
+  ggplot(aes(x = age_at_diagnosis_num, y = log2_vaf))+
+  geom_point()+
+  # xlim(15, 50)+
+  labs(x = "Age", y = "VAF (log2)")+
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), 
+           # label.x = 4.5#, 
+           label.y = -2.5
+           )
+
+glm(log2_vaf ~
+      age_at_diagnosis_num,
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
+```
+
+## Age square
+```{r}
+glm(ch_status ~
+      age_sq,
+    family = "binomial",
+    data = lymphoma_data) %>%
+  tbl_regression(exponentiate = TRUE
+                 ) %>%
+  add_n() |> add_nevent() |> 
+  modify_spanning_header(everything() ~ "Regression for CH status")
+lymphoma_data |> 
+  select(ch_status, age_sq) |> 
+  ggplot(aes(x = ch_status, y = age_sq))+
+  geom_boxplot()+
+  geom_jitter()+
+  stat_compare_means(method = "wilcox.test", label = "p.format" )
+```
+
+```{r}
+vaf_reg_dat |> 
+  select(vaf, log2_vaf, age_sq) |> 
+  ggplot(aes(x = age_sq, y = log2_vaf))+
+  geom_point()+
+  # xlim(15, 50)+
+  labs(x = "Age", y = "VAF (log2)")+
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), 
+           # label.x = 4.5#, 
+           label.y = -2.5
+           )
+
+glm(log2_vaf ~
+      age_sq,
+    data = vaf_reg_dat) %>%
+  tbl_regression(exponentiate = FALSE
+) %>%
+  modify_table_body(
+    ~ .x %>%
+      mutate(
+        estimate = 2^estimate,
+        conf.low = 2^conf.low,
+        conf.high = 2^conf.high
+      )
+  ) |> 
+  modify_spanning_header(everything() ~ "Regression for continuous CH log2(VAF) - result = VAF ratio or 2^β^")
+```
+<br>
+
+# II. The authors should report PFS and OS of the DLBCL cohort and more granularity about treatment received.
+
+## OS
+Median OS in months
+```{r}
+survfit(Surv(time = lymphoma_data$os_time_from_treatment_months,
+                   event = lymphoma_data$os_event) ~ 1,
+              data = lymphoma_data) %>%
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Median survival (95% CI)**"
+  ) %>% add_nevent() %>% add_n()
+survfit(Surv(time = lymphoma_data$os_time_from_treatment_months,
+                   event = lymphoma_data$os_event) ~ ch_status,
+              data = lymphoma_data) %>%
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Median survival (95% CI)**"
+  ) %>% add_nevent() %>% add_n()
+```
+
+```{r KM OS by CH}
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ch_status,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+```
+
+## PFS
+Median PFS in months
+```{r}
+survfit(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+                   event = lymphoma_data$pfs_event) ~ 1,
+              data = lymphoma_data) %>%
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Median PFS (95% CI)**"
+  ) %>% add_nevent() %>% add_n()
+survfit(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+                   event = lymphoma_data$pfs_event) ~ ch_status,
+              data = lymphoma_data) %>%
+  tbl_survfit(
+    probs = 0.5,
+    label_header = "**Median PFS (95% CI)**"
+  ) %>% add_nevent() %>% add_n()
+```
+
+```{r KM PFS by CH pfs}
+ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ch_status,
+                   data = lymphoma_data),
+           title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+```
+
+## Regimen
+```{r}
+lymphoma_data %>%
+  select(regimen, regimen_cat,
+         ch_status
+         ) %>%
+  tbl_summary(by = ch_status,
+              statistic = list(all_continuous() ~ 
+                                 "{median} [{min}-{max}] ({p25}, {p75})"),
+              digits = list(all_continuous() ~ 1)) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>%
+  modify_header(label ~ "**Patient characteristics**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+```
+<br>
+
+# Stage and IPI
+## Stage
+## Univariable
+```{r HR uva cox clinical}
+lymphoma_data <- lymphoma_data |> 
+  mutate(ipi_num = as.numeric(ipi_score)) |> 
+  mutate(stage_inv = factor(stage1, levels = c("IV", "III", "II", "I"))) |> 
+  mutate(stage2_inv = factor(stage2, levels = c("IV", "I-III"))) |> 
+  mutate(ipi_cat_inv = factor(ipi_cat, levels = c("High", "High Intermediate", "Low Intermediate", "Low")))
+
+tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = os_time_from_treatment_months, event = os_event),
+  exponentiate = TRUE,
+  include = c("stage", "stage1", "stage_inv", "stage2", "stage2_inv")) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+```
+
+```{r}
+lymphoma_data %>%
+  select(age_at_diagnosis_num, 
+         year_at_dx_cat,
+         sex, 
+         race, 
+         ethnicity_src_desc,
+         stage1,
+         bmi, bmi_cat,
+         `survival time (months, Registry)` = survival_time_in_months,
+         os_time_from_treatment_months, os_event,
+         pfs_event,
+         ch_status
+         ) %>%
+  tbl_summary(by = stage1,
+              digits = list(all_continuous() ~ 1)) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+  modify_header(label ~ "**Patient characteristics**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+```
+Stage II patients :
+
+- are older but diagnosed more recently   
+- are more likely represented in the intermediate BMI category   
+- are more likely to experience death   
+- are more likely to be No CH   
+
+```{r}
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ stage,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ stage1,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ stage2,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+```
+
+## IPI
+
+### IPI score vs Ekram stage categories
+High have score of 3+4+5
+```{r}
+table(lymphoma_data$ipi_score, lymphoma_data$ipi_cat_ekram)
+```
+
+Christelle's cat
+```{r}
+table(lymphoma_data$ipi_score, lymphoma_data$ipi_cat)
+```
+
+```{r}
+lymphoma_data %>%
+  select(ipi_num, ipi_score,
+         ipi_cat, ipi_cat2,
+         ch_status
+         ) %>%
+  tbl_summary(by = ch_status,
+              type = c(ipi_num ~ "continuous"),
+              digits = list(all_continuous() ~ 1)) %>%
+  bold_labels() %>%
+  add_p() %>% bold_p(t = 0.05) %>% add_overall() %>% 
+  modify_header(label ~ "**Patient characteristics**",
+                all_stat_cols() ~ "**{level}**, N = {n}")
+```
+
+### OS
+```{r}
+tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = os_time_from_treatment_months, event = os_event),
+  exponentiate = TRUE,
+  include = c("ipi_num", "ipi_score", "ipi_cat", "ipi_cat_inv", "ipi_cat2")) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+```
+
+```{r}
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ipi_score,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ipi_cat,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(os_time_from_treatment_months, os_event) ~ ipi_cat2,
+                   data = lymphoma_data),
+           # title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+```
+
+#### Multivariable
+```{r}
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_num +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "Continuous IPI")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat_inv +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories - High as reference")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat2 +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 2 categories")
+```
+
+### PFS
+```{r}
+tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = pfs_time_from_treatment_months, event = pfs_event),
+  exponentiate = TRUE,
+  include = c("ipi_num", "ipi_score", "ipi_cat", "ipi_cat_inv", "ipi_cat2")) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+```
+
+```{r}
+ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ipi_score,
+                   data = lymphoma_data),
+           title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ipi_cat,
+                   data = lymphoma_data),
+           title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+ggsurvplot(survfit(Surv(pfs_time_from_treatment_months, pfs_event) ~ ipi_cat2,
+                   data = lymphoma_data),
+           title = "PFS Analysis",
+           font.main = c(20, "bold", "black"),
+           font.x = c(18, "bold", "black"),
+           font.y = c(18, "bold", "black"),
+           font.legend = c(16, "black"),
+           font.tickslab = c(16, "bold", "black"),
+           size = 1.5,
+
+           xlab = "Time (months)",
+           legend = "top",
+           pval = TRUE,
+           conf.int = FALSE,
+           # Censor
+           censor = TRUE
+) %++% guides(colour = guide_legend(ncol = 1))
+```
+
+#### Multivariable
+```{r}
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_num +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "Continuous IPI")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat_inv +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories - High as reference")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat2 +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 2 categories")
+```
+<br>
+
+## IPI & age square
+### OS
+#### Univariable
+```{r}
+tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = os_time_from_treatment_months, event = os_event),
+  exponentiate = TRUE,
+  include = c("age_sq", "ipi_num", "ipi_score", "ipi_cat", "ipi_cat_inv", "ipi_cat2")) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+```
+
+#### Multivariable
+```{r}
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_num + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "Continuous IPI")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat_inv + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories - High as reference")
+coxph(Surv(time = lymphoma_data$os_time_from_treatment_months,
+             event = lymphoma_data$os_event) ~ ipi_cat2 + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 2 categories")
+```
+
+### PFS
+#### Univariable
+```{r}
+tbl_uvregression(
+  lymphoma_data,
+  method = coxph,
+  y = Surv(time = pfs_time_from_treatment_months, event = pfs_event),
+  exponentiate = TRUE,
+  include = c("age_sq", "ipi_num", "ipi_score", "ipi_cat", "ipi_cat_inv", "ipi_cat2")) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>%
+  bold_labels() %>% italicize_levels()
+```
+
+#### Multivariable
+```{r}
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_num + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "Continuous IPI")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat_inv + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 4 categories - High as reference")
+coxph(Surv(time = lymphoma_data$pfs_time_from_treatment_months,
+             event = lymphoma_data$pfs_event) ~ ipi_cat2 + age_sq +
+          sex + ch_status + smi_sdhr + 
+          sat_cm2_index_sdhr +
+          vat_cm2_index_sdhr + imat_cm2_index_sdhr,
+        data = lymphoma_data)  %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  bold_p(t = .05) %>%
+  add_nevent(location = "level") %>% add_n(location = "level") %>% 
+  modify_spanning_header(everything() ~ "IPI 2 categories")
+```
+
+
+# Multiple comparison
+```{r}
+tbl_ch_muscle_ind_mva <- 
+  glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          smi_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+tbl_ch_vat_ind_mva <- 
+  glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          vat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+tbl_ch_sat_ind_mva <- 
+  glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          sat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+tbl_ch_imat_ind_mva <- 
+  glm(ch_status ~
+      age_at_diagnosis_num + sex + stage +
+          imat_cm2_index_sdhr,
+    family = "binomial",
+    data = lymphoma_data)
+
+```
+
+
+```{r}
+vaf_reg_dat <- ch_mutation %>% 
+  filter(!is.na(vaf)) %>%
+  select(mrn, vaf) %>% 
+  arrange(mrn, desc(vaf)) %>% 
+  distinct(mrn, .keep_all = TRUE) |>
+  mutate(log2_vaf = log2(vaf)) %>% 
+  mutate(vaf_cat = case_when(
+    vaf >= 0.10           ~ 1,
+    vaf < 0.10            ~ 0
+  )) %>% 
+  full_join(lymphoma_data, 
+            ., 
+            by = "mrn") %>% 
+  filter(!is.na(vaf))
+```
+
+```{r}
+tbl_vaf_muscle_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        smi_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vaf_vat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        vat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vaf_sat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        sat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vaf_imat_ind_mva <- 
+  glm(log2_vaf ~
+        age_at_diagnosis_num + sex + stage +
+        imat_cm2_index_sdhr,
+      # family = "binomial",
+      data = vaf_reg_dat)
+
+```
+
+```{r}
+tbl_vafcat_muscle_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        smi_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vafcat_vat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        vat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vafcat_sat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        sat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat)
+
+tbl_vafcat_imat_ind_mva <- 
+  glm(vaf_cat ~
+        age_at_diagnosis_num + sex + stage +
+        imat_cm2_index_sdhr,
+      family = "binomial",
+      data = vaf_reg_dat)
+
+```
+
+I added 24 models into the multiple comparison adjustment. The resulting p value are presented below.   
+The models with the prefix `CH_` are for the CH status outcome, `VAF_` for the log2VAF outcome, and `VAFc_` for the categorical VAF outcome.   
+The sufixe is the predictor included.   
+All these models are adjusted by age + sex + stage.
+```{r}
+models <- list(
+    CH_SMI  = tbl_ch_muscle_ind_mva,
+    CH_VATI  = tbl_ch_vat_ind_mva,
+    CH_SATI  = tbl_ch_sat_ind_mva,
+    CH_IMATI = tbl_ch_imat_ind_mva,
+    VAF_SMI  = tbl_vaf_muscle_ind_mva,
+    VAF_VATI  = tbl_vaf_vat_ind_mva,
+    VAF_SATI  = tbl_vaf_sat_ind_mva,
+    VAF_IMATI = tbl_vaf_imat_ind_mva,
+    VAFc_SMI  = tbl_vafcat_muscle_ind_mva,
+    VAFc_VATI = tbl_vafcat_vat_ind_mva,
+    VAFc_SATI  = tbl_vafcat_sat_ind_mva,
+    VAFc_IMATI = tbl_vafcat_imat_ind_mva
+)
+
+exposure_terms <- c(
+  smi_sdhr  = "SMI",
+  vat_cm2_index_sdhr  = "VATI",
+  sat_cm2_index_sdhr  = "SATI",
+  imat_cm2_index_sdhr = "IMATI"
+)
+
+# results <- 
+  imap_dfr(models, function(model, exposure) {
+  broom::tidy(model) |>
+    filter(term %in% c(names(exposure_terms))) |>
+    transmute(
+      exposure = exposure,
+      estimate = estimate,
+      p_value = p.value
+    )
+}) |>
+  mutate(
+    OR = exp(estimate),
+    p_adjusted = p.adjust(p_value, method = "BH")
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
